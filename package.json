@@ -1,0 +1,19 @@
+{
+  "name": "school-photobooth",
+  "version": "1.0.0",
+  "description": "School Festival 4-Cut Photobooth System with Tablet Kiosk, Photo Printer & Email Integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "localtunnel": "^2.0.2",
+    "nodemailer": "^6.9.16",
+    "qrcode": "^1.5.4",
+    "selfsigned": "^5.5.0"
+  }
+}

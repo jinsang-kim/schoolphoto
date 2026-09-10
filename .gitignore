@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Uploads and temporary test photos (keep folder structure with .gitkeep)
+uploads/*
+!uploads/.gitkeep
+
+# System and logs
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,245 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>학교 축제 인생네컷 포토부스</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- 인생네컷 감성 구글 폰트 (Pretendard, Montserrat, Playfair Display, Pacifico, Black Han Sans, Gaegu) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@700&family=Montserrat:wght@800;900&family=Pacifico&family=Playfair+Display:ital,wght@0,800;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  
+  <!-- Lucide 아이콘 -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div id="app" class="app-container">
+    
+    <!-- 1. 시작 / 모드 선택 화면 -->
+    <section id="screen-home" class="screen active">
+      <div class="home-backdrop">
+        <div class="glow-circle glow-1"></div>
+        <div class="glow-circle glow-2"></div>
+      </div>
+      <div class="home-content">
+        <div class="badge"><i data-lucide="sparkles"></i> 2026 SCHOOL FESTIVAL</div>
+        <h1 class="main-title">우리들의 청춘네컷</h1>
+        <p class="main-desc">촬영할 레이아웃 모드를 선택해 주세요!</p>
+        
+        <!-- 모드 선택 카드 -->
+        <div class="mode-select-grid">
+          <div class="mode-card" onclick="selectModeAndStart('strip')">
+            <div class="mode-preview-box strip-preview">
+              <div class="strip-col">
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+              </div>
+              <div class="strip-col">
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+              </div>
+            </div>
+            <div class="mode-info">
+              <span class="mode-badge">클래식 스트립</span>
+              <h3>데스크탑 모드</h3>
+              <p>세로 4컷 × 2줄 분할 출력<br>(친구와 반 잘라 나눠갖기)</p>
+            </div>
+            <button class="mode-start-btn">시작하기 <i data-lucide="chevron-right"></i></button>
+          </div>
+
+          <div class="mode-card active-pulse" onclick="selectModeAndStart('grid')">
+            <div class="mode-preview-box grid-preview">
+              <div class="grid-row">
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+              </div>
+              <div class="grid-row">
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+              </div>
+            </div>
+            <div class="mode-info">
+              <span class="mode-badge tablet-badge">✨ 태블릿 추천 ✨</span>
+              <h3>태블릿 모드</h3>
+              <p>2×2 엽서형 4분할 출력<br>(태블릿에 꽉 차는 와이드 뷰)</p>
+            </div>
+            <button class="mode-start-btn primary">시작하기 <i data-lucide="chevron-right"></i></button>
+          </div>
+        </div>
+
+        <div class="quick-info">
+          <span><i data-lucide="type"></i> 볼드 & 감성 캘리그라피 타이포그래피</span>
+          <span>•</span>
+          <span><i data-lucide="printer"></i> 즉석 포토 인쇄</span>
+          <span>•</span>
+          <span><i data-lucide="qr-code"></i> 스마트폰 QR 다운로드</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 테마 및 프레임 선택 화면 (실시간 인쇄 완성형 라이브 프리뷰) -->
+    <section id="screen-theme" class="screen">
+      <div class="screen-header">
+        <button class="back-btn" onclick="goToScreen('home')"><i data-lucide="arrow-left"></i></button>
+        <div>
+          <h2>스타일 & 필터 설정</h2>
+          <span class="header-mode-tag" id="current-mode-tag">태블릿 2×2 모드</span>
+        </div>
+        <div style="width: 36px;"></div>
+      </div>
+
+      <div class="theme-split-layout">
+        
+        <!-- 왼쪽: 실시간 완성 프레임 라이브 뷰어 -->
+        <div class="live-frame-viewer-card">
+          <div class="viewer-header">
+            <span class="live-badge"><i data-lucide="eye"></i> 인쇄 완성본 실시간 미리보기</span>
+          </div>
+          <div class="live-canvas-container">
+            <canvas id="theme-live-preview-canvas"></canvas>
+          </div>
+          <div class="viewer-footer">
+            <span id="selected-theme-badge-name">러브 하트드로잉 💖</span>
+            <span class="ratio-tag">4×6인치 규격</span>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 테마 10종 & 필터 10종 선택기 -->
+        <div class="theme-selector-panel">
+          
+          <div class="section-title-bar">
+            <i data-lucide="palette"></i>
+            <span>1. 프레임 테마 선택 (10종)</span>
+          </div>
+          <div class="theme-selection-grid" id="theme-grid-container"></div>
+
+          <div class="section-title-bar" style="margin-top: 14px;">
+            <i data-lucide="sliders"></i>
+            <span>2. 사진 색감 필터 (10종)</span>
+          </div>
+          <div class="filter-options-grid" id="filter-grid-container"></div>
+
+        </div>
+      </div>
+
+      <!-- 하단 고정 촬영 시작 버튼 -->
+      <div class="fixed-bottom-bar">
+        <button class="action-btn primary" onclick="startCameraAndCountdown()">
+          <span>이 스타일로 촬영 시작하기 📸</span>
+          <i data-lucide="chevron-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. 촬영 화면 -->
+    <section id="screen-camera" class="screen">
+      <div id="flash-overlay" class="flash-overlay"></div>
+
+      <div class="camera-wrapper">
+        <video id="webcam" autoplay playsinline muted></video>
+        
+        <div class="camera-top-indicator">
+          <div class="step-indicator" id="cut-indicator">
+            <span class="active">1</span> / 4
+          </div>
+          <div class="status-msg" id="camera-status-msg">포즈를 취해주세요!</div>
+        </div>
+
+        <div id="countdown-display" class="countdown-display hidden">3</div>
+
+        <div class="captured-thumbs-bar" id="camera-thumbs-bar">
+          <div class="thumb-slot" id="thumb-0"><div class="slot-num">1</div></div>
+          <div class="thumb-slot" id="thumb-1"><div class="slot-num">2</div></div>
+          <div class="thumb-slot" id="thumb-2"><div class="slot-num">3</div></div>
+          <div class="thumb-slot" id="thumb-3"><div class="slot-num">4</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 결과 확인 & 인쇄 매수 설정 화면 -->
+    <section id="screen-preview" class="screen">
+      <div class="screen-header">
+        <button class="back-btn" onclick="retakePhotos()"><i data-lucide="arrow-left"></i></button>
+        <h2>인생네컷 완성! 🎉</h2>
+        <div style="width: 36px;"></div>
+      </div>
+
+      <div class="preview-layout-container">
+        <div class="canvas-preview-wrapper">
+          <canvas id="output-canvas"></canvas>
+        </div>
+
+        <div class="preview-controls">
+          <div class="result-notice">
+            <i data-lucide="check-circle" class="text-green"></i>
+            <div>
+              <h4>사진 4장이 멋지게 완성되었습니다!</h4>
+              <p>인쇄 매수를 선택하고 완료를 눌러주세요.</p>
+            </div>
+          </div>
+
+          <div class="form-group print-select-box">
+            <label class="form-label"><i data-lucide="printer"></i> 인쇄 수량 선택</label>
+            <div class="qty-selector">
+              <button class="qty-btn active" onclick="setPrintQty(1, this)">1장</button>
+              <button class="qty-btn" onclick="setPrintQty(2, this)">2장</button>
+              <button class="qty-btn" onclick="setPrintQty(0, this)">QR만 받기</button>
+            </div>
+            <p class="field-hint" id="print-layout-hint">※ 4×6인치 규격 포토 인화지로 즉석 출력됩니다.</p>
+          </div>
+
+          <div class="action-buttons-group">
+            <button class="action-btn secondary" onclick="retakePhotos()">
+              <i data-lucide="rotate-ccw"></i>
+              <span>다시 촬영하기</span>
+            </button>
+            <button class="action-btn primary" id="submit-complete-btn" onclick="submitFinal()">
+              <i data-lucide="qr-code"></i>
+              <span>인쇄 & QR코드 받기</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. 최종 QR코드 및 완료 화면 -->
+    <section id="screen-finish" class="screen">
+      <div class="finish-card">
+        <div class="success-check-anim">
+          <i data-lucide="check-circle-2" class="check-icon"></i>
+        </div>
+        <h2>사진이 준비되었습니다! 🎉</h2>
+        <p class="finish-msg" id="finish-status-msg">포토 프린터에서 사진이 출력되고 있습니다.</p>
+        
+        <div class="qr-result-card">
+          <div class="qr-box">
+            <img id="qr-image" src="" alt="사진 다운로드 QR코드">
+          </div>
+          <div class="qr-instructions">
+            <div class="qr-badge"><i data-lucide="smartphone"></i> 스마트폰 카메라로 스캔하세요</div>
+            <p>기본 카메라로 위 QR을 비추면<br><strong>고화질 원본 사진이 다운로드</strong>됩니다.</p>
+          </div>
+        </div>
+
+        <div class="auto-reset-timer">
+          <span id="reset-counter">15</span>초 후 처음 화면으로 돌아갑니다.
+        </div>
+
+        <button class="action-btn secondary" onclick="resetToHome()">
+          <span>처음으로 돌아가기</span>
+        </button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
