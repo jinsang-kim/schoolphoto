@@ -25,6 +25,15 @@
         <div class="glow-circle glow-1"></div>
         <div class="glow-circle glow-2"></div>
       </div>
+      
+      <!-- 상단 프린터 설정 버튼 -->
+      <div class="home-top-bar">
+        <button class="settings-trigger-btn" onclick="openSettingsModal()" title="프린터 및 시스템 설정">
+          <i data-lucide="settings"></i>
+          <span>프린터 설정</span>
+        </button>
+      </div>
+
       <div class="home-content">
         <div class="badge"><i data-lucide="sparkles"></i> 2026 SCHOOL FESTIVAL</div>
         <h1 class="main-title">우리들의 청춘네컷</h1>
@@ -187,7 +196,12 @@
           </div>
 
           <div class="form-group print-select-box">
-            <label class="form-label"><i data-lucide="printer"></i> 인쇄 수량 선택</label>
+            <div class="print-header-row">
+              <label class="form-label"><i data-lucide="printer"></i> 인쇄 수량 선택</label>
+              <button type="button" class="btn-printer-badge" onclick="openSettingsModal()" title="프린터 변경">
+                <i data-lucide="printer"></i> <span id="current-printer-display">EPSON L15150 Series</span> <i data-lucide="edit-3" class="edit-icon"></i>
+              </button>
+            </div>
             <div class="qty-selector">
               <button class="qty-btn active" onclick="setPrintQty(1, this)">1장</button>
               <button class="qty-btn" onclick="setPrintQty(2, this)">2장</button>
@@ -241,6 +255,57 @@
         </button>
       </div>
     </section>
+
+    <!-- ⚙️ 프린터 설정 모달 -->
+    <div id="modal-settings" class="modal-overlay hidden" onclick="handleModalOverlayClick(event)">
+      <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <i data-lucide="printer"></i>
+            <h3>포토 프린터 설정</h3>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="closeSettingsModal()">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+          <p class="modal-desc">인쇄 명령을 전송할 포토 프린터의 이름을 직접 지정할 수 있습니다.</p>
+          
+          <div class="modal-form-group">
+            <label class="modal-label" for="input-printer-name">프린터 이름 (Windows 등록 명칭)</label>
+            <div class="printer-input-row">
+              <input type="text" id="input-printer-name" class="modal-input" placeholder="예: EPSON L15150 Series" />
+              <button type="button" class="modal-btn-sub" onclick="detectPrinters()" title="PC에 연결된 프린터 검색">
+                <i data-lucide="refresh-cw"></i> 검색
+              </button>
+            </div>
+          </div>
+
+          <div id="detected-printers-container" class="detected-printers-box" style="display: none;">
+            <label class="modal-sublabel">🔍 감지된 프린터 목록 (클릭하여 선택):</label>
+            <div id="detected-printers-list" class="printer-chips-list"></div>
+          </div>
+
+          <div class="quick-printer-presets">
+            <label class="modal-sublabel">자주 쓰는 프린터 빠른 선택:</label>
+            <div class="preset-chips">
+              <button type="button" class="preset-chip" onclick="setPrinterInputValue('EPSON L15150 Series')">EPSON L15150 Series</button>
+              <button type="button" class="preset-chip" onclick="setPrinterInputValue('Canon SELPHY CP1500')">Canon SELPHY CP1500</button>
+              <button type="button" class="preset-chip" onclick="setPrinterInputValue('Canon SELPHY CP1300')">Canon SELPHY CP1300</button>
+              <button type="button" class="preset-chip" onclick="setPrinterInputValue('Microsoft Print to PDF')">PDF 가상 인쇄</button>
+            </div>
+          </div>
+
+          <div id="printer-save-feedback" class="modal-feedback" style="display: none;"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="action-btn secondary modal-action" onclick="closeSettingsModal()">취소</button>
+          <button type="button" class="action-btn primary modal-action" onclick="savePrinterSettings()">
+            <i data-lucide="check"></i> <span>설정 저장</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
   </div>
 

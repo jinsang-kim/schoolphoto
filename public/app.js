@@ -5,6 +5,7 @@ const state = {
   selectedTheme: "pink_heart",
   selectedFilter: "bright",
   printQuantity: 1,
+  printerName: localStorage.getItem("photobooth_printer") || "EPSON L15150 Series",
   capturedImages: [],
   stream: null,
   isCapturing: false,
@@ -225,6 +226,7 @@ const FILTER_CONFIG = {
 document.addEventListener("DOMContentLoaded", () => {
   renderThemeList();
   renderFilterList();
+  initPrinterConfig();
   
   // 웹폰트 로드 완료 후 캔버스 렌더링
   if (document.fonts) {
@@ -955,6 +957,7 @@ function setPrintQty(qty, element) {
 }
 
 // 최종 전송 및 QR 생성
+// 최종 전송 및 QR 생성
 async function submitFinal() {
   const submitBtn = document.getElementById("submit-complete-btn");
 
@@ -974,6 +977,7 @@ async function submitFinal() {
           printCount: state.printQuantity,
           frameTheme: state.selectedTheme,
           layoutMode: state.layoutMode,
+          printerName: state.printerName,
         }),
       });
 
@@ -1024,7 +1028,7 @@ async function submitFinal() {
 
     const statusMsg = document.getElementById("finish-status-msg");
     if (isServerOk && state.printQuantity > 0) {
-      statusMsg.innerText = `포토 프린터에서 ${state.printQuantity}장이 인쇄되고 있습니다. 🖨️\n스마트폰으로 QR코드를 스캔하여 저장하세요!`;
+      statusMsg.innerText = `포토 프린터(${state.printerName})에서 ${state.printQuantity}장이 인쇄되고 있습니다. 🖨️\n스마트폰으로 QR코드를 스캔하여 저장하세요!`;
     } else {
       statusMsg.innerText = "스마트폰으로 QR을 스캔하거나 아래 링크로 저장하세요! 📱";
     }
@@ -1070,4 +1074,137 @@ function resetToHome() {
   state.capturedImages = [];
   state.finalImageBase64 = null;
   goToScreen("home");
+}
+
+// ====================================================
+// ⚙️ 프린터 설정 관리 함수들
+// ====================================================
+async function initPrinterConfig() {
+  try {
+    const res = await fetch("/api/config");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.printerName && !localStorage.getItem("photobooth_printer")) {
+        state.printerName = data.printerName;
+      }
+    }
+  } catch (e) {
+    console.log("Config fetch note:", e.message);
+  }
+  updatePrinterUI();
+}
+
+function updatePrinterUI() {
+  const displayEl = document.getElementById("current-printer-display");
+  if (displayEl) {
+    displayEl.innerText = state.printerName;
+  }
+  const inputEl = document.getElementById("input-printer-name");
+  if (inputEl) {
+    inputEl.value = state.printerName;
+  }
+}
+
+function openSettingsModal() {
+  const modal = document.getElementById("modal-settings");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  updatePrinterUI();
+
+  const feedback = document.getElementById("printer-save-feedback");
+  if (feedback) feedback.style.display = "none";
+
+  detectPrinters();
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeSettingsModal() {
+  const modal = document.getElementById("modal-settings");
+  if (modal) modal.classList.add("hidden");
+}
+
+function handleModalOverlayClick(event) {
+  if (event.target && event.target.id === "modal-settings") {
+    closeSettingsModal();
+  }
+}
+
+function setPrinterInputValue(name) {
+  const input = document.getElementById("input-printer-name");
+  if (input) {
+    input.value = name;
+  }
+
+  // 칩 활성화 표시
+  document.querySelectorAll(".printer-chip, .preset-chip").forEach((chip) => {
+    if (chip.innerText.includes(name)) {
+      chip.classList.add("active");
+    } else {
+      chip.classList.remove("active");
+    }
+  });
+}
+
+async function detectPrinters() {
+  const container = document.getElementById("detected-printers-container");
+  const listEl = document.getElementById("detected-printers-list");
+  if (!container || !listEl) return;
+
+  listEl.innerHTML = `<span style="font-size: 12px; color: #94a3b8;">🔍 연결된 프린터 검색 중...</span>`;
+  container.style.display = "block";
+
+  try {
+    const res = await fetch("/api/printers");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.printers && data.printers.length > 0) {
+        listEl.innerHTML = data.printers
+          .map((name) => {
+            const isSel = name === (document.getElementById("input-printer-name")?.value || state.printerName);
+            const safeName = name.replace(/'/g, "\\'");
+            return `<button type="button" class="printer-chip ${isSel ? "active" : ""}" onclick="setPrinterInputValue('${safeName}')">🖨️ ${name}</button>`;
+          })
+          .join("");
+        return;
+      }
+    }
+  } catch (e) {
+    console.log("Printer search note:", e.message);
+  }
+
+  listEl.innerHTML = `<span style="font-size: 12px; color: #94a3b8;">프린터 목록을 직접 입력하거나 아래 자주 쓰는 프린터를 선택하세요.</span>`;
+}
+
+async function savePrinterSettings() {
+  const input = document.getElementById("input-printer-name");
+  const newName = input?.value?.trim();
+
+  if (!newName) {
+    alert("프린터 이름을 입력해 주세요.");
+    return;
+  }
+
+  state.printerName = newName;
+  localStorage.setItem("photobooth_printer", newName);
+  updatePrinterUI();
+
+  try {
+    await fetch("/api/config/printer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ printerName: newName }),
+    });
+  } catch (e) {
+    console.warn("서버 프린터 설정 동기화 알림 (로컬 적용됨):", e.message);
+  }
+
+  const feedback = document.getElementById("printer-save-feedback");
+  if (feedback) {
+    feedback.innerText = `✅ 프린터가 '${newName}'(으)로 저장되었습니다!`;
+    feedback.style.display = "block";
+  }
+
+  setTimeout(() => {
+    closeSettingsModal();
+  }, 700);
 }

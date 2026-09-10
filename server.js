@@ -56,20 +56,53 @@ function getLocalIpAddress() {
 }
 
 const localIp = getLocalIpAddress();
+let currentPrinterName = process.env.PRINTER_NAME || "EPSON L15150 Series";
 
 // 1. 기본 설정 정보 조회
 app.get("/api/config", (req, res) => {
   const host = req.get("host") || `${localIp}:${PORT}`;
-  const protocol = req.protocol || "http";
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const baseUrl = `${protocol}://${host}`;
 
   res.json({
     schoolName: process.env.SCHOOL_NAME || "2026 청춘 학교 축제",
     subtitle: process.env.EVENT_SUBTITLE || "추억을 남기는 인생네컷",
-    printerName: process.env.PRINTER_NAME || "Canon SELPHY CP1200",
+    printerName: currentPrinterName,
     enableAutoPrint: process.env.AUTO_PRINT === "true",
     localIp,
     baseUrl,
+  });
+});
+
+// 프린터 이름 실시간 변경 API
+app.post("/api/config/printer", (req, res) => {
+  const { printerName } = req.body;
+  if (printerName && typeof printerName === "string") {
+    currentPrinterName = printerName.trim();
+    console.log(`[PRINTER CONFIG] 프린터가 '${currentPrinterName}'(으)로 변경되었습니다.`);
+    return res.json({ success: true, printerName: currentPrinterName });
+  }
+  res.status(400).json({ error: "유효한 프린터 이름을 입력해주세요." });
+});
+
+// 연결된 프린터 목록 자동 조회 API (Windows)
+app.get("/api/printers", (req, res) => {
+  if (process.platform !== "win32") {
+    return res.json({
+      printers: [currentPrinterName, "EPSON L15150 Series", "Canon SELPHY CP1500", "Microsoft Print to PDF"]
+    });
+  }
+
+  exec('powershell -Command "Get-CimInstance Win32_Printer | Select-Object -ExpandProperty Name"', (err, stdout) => {
+    if (err || !stdout) {
+      return res.json({
+        printers: [currentPrinterName, "EPSON L15150 Series", "Canon SELPHY CP1500", "Microsoft Print to PDF"]
+      });
+    }
+    const list = stdout.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    res.json({
+      printers: list.length > 0 ? Array.from(new Set([currentPrinterName, ...list])) : [currentPrinterName]
+    });
   });
 });
 
@@ -174,7 +207,8 @@ app.get("/download/:fileName", (req, res) => {
 // 3. 사진 저장 및 처리 API (QR 코드 생성 & 인쇄)
 app.post("/api/complete", async (req, res) => {
   try {
-    const { imageBase64, printCount = 1, frameTheme = "classic" } = req.body;
+    const { imageBase64, printCount = 1, frameTheme = "classic", printerName: reqPrinterName } = req.body;
+    const printerName = reqPrinterName || currentPrinterName || process.env.PRINTER_NAME || "EPSON L15150 Series";
 
     if (!imageBase64) {
       return res.status(400).json({ error: "이미지 데이터가 없습니다." });
@@ -216,7 +250,6 @@ app.post("/api/complete", async (req, res) => {
 
     // 프린터 인쇄 처리 (Windows 로컬 환경)
     if (printCount > 0 && process.platform === "win32") {
-      const printerName = process.env.PRINTER_NAME || "EPSON L15150 Series";
       const psScriptPath = path.join(__dirname, "print-photo.ps1");
 
       if (fs.existsSync(psScriptPath)) {
