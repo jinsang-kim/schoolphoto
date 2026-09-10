@@ -16,15 +16,31 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// 업로드 폴더 확인
-const uploadDir = path.join(__dirname, "uploads");
+// 업로드 및 사진 캐시 저장소 (Vercel Serverless 및 로컬 호환)
+const uploadDir = path.join(os.tmpdir(), "photobooth_uploads");
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  } catch (e) {
+    console.error("Upload dir creation error:", e);
+  }
 }
+const memoryPhotos = new Map();
 
 // 정적 파일 서빙
 app.use(express.static(path.join(__dirname, "public")));
-app.use("/uploads", express.static(uploadDir));
+app.get("/uploads/:fileName", (req, res) => {
+  const fileName = req.params.fileName;
+  const filePath = path.join(uploadDir, fileName);
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  }
+  if (memoryPhotos.has(fileName)) {
+    res.setHeader("Content-Type", "image/jpeg");
+    return res.send(memoryPhotos.get(fileName));
+  }
+  res.status(404).send("사진을 찾을 수 없습니다.");
+});
 
 // 로컬 IPv4 주소 자동 탐지 함수
 function getLocalIpAddress() {
@@ -61,8 +77,9 @@ app.get("/api/config", (req, res) => {
 app.get("/download/:fileName", (req, res) => {
   const fileName = req.params.fileName;
   const filePath = path.join(uploadDir, fileName);
+  const exists = fs.existsSync(filePath) || memoryPhotos.has(fileName);
 
-  if (!fs.existsSync(filePath)) {
+  if (!exists) {
     return res.status(404).send(`
       <!DOCTYPE html>
       <html lang="ko">
@@ -163,13 +180,18 @@ app.post("/api/complete", async (req, res) => {
       return res.status(400).json({ error: "이미지 데이터가 없습니다." });
     }
 
-    // Base64 데이터를 파일로 저장
+    // Base64 데이터를 파일 및 메모리에 저장
     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
     const buffer = Buffer.from(base64Data, "base64");
     const fileName = `photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
     const filePath = path.join(uploadDir, fileName);
 
-    fs.writeFileSync(filePath, buffer);
+    try {
+      fs.writeFileSync(filePath, buffer);
+    } catch (fsErr) {
+      console.warn("디스크 파일 쓰기 알림:", fsErr.message);
+    }
+    memoryPhotos.set(fileName, buffer);
     const photoUrl = `/uploads/${fileName}`;
 
     // 스마트폰 스캔용 다운로드 URL
@@ -192,25 +214,27 @@ app.post("/api/complete", async (req, res) => {
     let printSuccess = false;
     let printMessage = "인쇄가 요청되지 않았습니다.";
 
-    // 프린터 인쇄 처리
-    if (printCount > 0) {
-      const printerName = process.env.PRINTER_NAME || "Canon SELPHY CP1200";
+    // 프린터 인쇄 처리 (Windows 로컬 환경)
+    if (printCount > 0 && process.platform === "win32") {
+      const printerName = process.env.PRINTER_NAME || "EPSON L15150 Series";
       const psScriptPath = path.join(__dirname, "print-photo.ps1");
 
-      const psCommand = `powershell -ExecutionPolicy Bypass -File "${psScriptPath}" -ImagePath "${filePath}" -PrinterName "${printerName}" -Copies ${printCount}`;
+      if (fs.existsSync(psScriptPath)) {
+        const psCommand = `powershell -ExecutionPolicy Bypass -File "${psScriptPath}" -ImagePath "${filePath}" -PrinterName "${printerName}" -Copies ${printCount}`;
 
-      console.log(`[PRINT REQUEST] 실행 중: ${psCommand}`);
+        console.log(`[PRINT REQUEST] 실행 중: ${psCommand}`);
 
-      exec(psCommand, (error, stdout, stderr) => {
-        if (error) {
-          console.error("[PRINT ERROR]:", stderr || error.message);
-        } else {
-          console.log("[PRINT SUCCESS]:", stdout.trim());
-        }
-      });
+        exec(psCommand, (error, stdout, stderr) => {
+          if (error) {
+            console.error("[PRINT ERROR]:", stderr || error.message);
+          } else {
+            console.log("[PRINT SUCCESS]:", stdout.trim());
+          }
+        });
 
-      printSuccess = true;
-      printMessage = `프린터(${printerName})로 ${printCount}장 인쇄 명령을 전송했습니다.`;
+        printSuccess = true;
+        printMessage = `프린터(${printerName})로 ${printCount}장 인쇄 명령을 전송했습니다.`;
+      }
     }
 
     res.json({
