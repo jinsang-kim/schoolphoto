@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
@@ -8,6 +8,7 @@ const { exec } = require("child_process");
 require("dotenv").config();
 
 const app = express();
+app.set("trust proxy", true);
 const PORT = process.env.PORT || 3000;
 
 // 미들웨어
@@ -173,8 +174,8 @@ app.post("/api/complete", async (req, res) => {
 
     // 스마트폰 스캔용 다운로드 URL
     const reqHost = req.get("host") || `${localIp}:${PORT}`;
-    const protocol = req.protocol || "http";
-    const actualHost = reqHost.includes("localhost") ? `${localIp}:${PORT}` : reqHost;
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol || (req.secure ? "https" : "http");
+    const actualHost = (reqHost.includes("localhost") || reqHost.includes("127.0.0.1")) ? `${localIp}:${PORT}` : reqHost;
     const downloadUrl = `${protocol}://${actualHost}/download/${fileName}`;
 
     // QR 코드 이미지(Data URL) 생성

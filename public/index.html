@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -12,8 +12,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@700&family=Montserrat:wght@800;900&family=Pacifico&family=Playfair+Display:ital,wght@0,800;1,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
   
-  <!-- Lucide 아이콘 -->
+  <!-- Lucide 아이콘 & QRCode 라이브러리 -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
   <div id="app" class="app-container">
@@ -224,7 +225,10 @@
           </div>
           <div class="qr-instructions">
             <div class="qr-badge"><i data-lucide="smartphone"></i> 스마트폰 카메라로 스캔하세요</div>
-            <p>기본 카메라로 위 QR을 비추면<br><strong>고화질 원본 사진이 다운로드</strong>됩니다.</p>
+            <p id="qr-desc-text">기본 카메라로 위 QR을 비추면<br><strong>고화질 원본 사진이 다운로드</strong>됩니다.</p>
+            <a id="direct-download-link" href="#" download="life4cut_photo.jpg" class="direct-dl-btn" style="display: none; margin-top: 10px; color: #38bdf8; text-decoration: underline; font-size: 14px; font-weight: 600;">
+              💾 이 기기/브라우저에 바로 저장하기
+            </a>
           </div>
         </div>
 

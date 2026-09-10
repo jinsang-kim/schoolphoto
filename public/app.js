@@ -1,4 +1,4 @@
-﻿// 상태 관리 객체
+// 상태 관리 객체
 const state = {
   currentScreen: "home",
   layoutMode: "grid", // 'grid' (태블릿 2x2) 또는 'strip' (데스크탑 4x1 2줄)
@@ -954,7 +954,7 @@ function setPrintQty(qty, element) {
   if (element) element.classList.add("active");
 }
 
-// 최종 전송
+// 최종 전송 및 QR 생성
 async function submitFinal() {
   const submitBtn = document.getElementById("submit-complete-btn");
 
@@ -962,40 +962,87 @@ async function submitFinal() {
   submitBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> 처리 중입니다...`;
 
   try {
-    const res = await fetch("/api/complete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        imageBase64: state.finalImageBase64,
-        printCount: state.printQuantity,
-        frameTheme: state.selectedTheme,
-        layoutMode: state.layoutMode,
-      }),
-    });
+    let qrUrl = "";
+    let isServerOk = false;
 
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: state.finalImageBase64,
+          printCount: state.printQuantity,
+          frameTheme: state.selectedTheme,
+          layoutMode: state.layoutMode,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.qrCodeDataUrl) {
+          qrUrl = data.qrCodeDataUrl;
+          isServerOk = true;
+        }
+      }
+    } catch (netErr) {
+      console.warn("서버 API 연결 불가 (웹 앱 단독 실행 또는 네트워크 환경):", netErr);
+    }
+
+    // 서버 미연결 또는 정적 웹앱(GitHub Pages 등) 환경일 경우 클라이언트 자체 QR 생성
+    if (!qrUrl && typeof QRCode !== "undefined" && QRCode.toDataURL) {
+      try {
+        const fallbackTarget = window.location.href;
+        qrUrl = await QRCode.toDataURL(fallbackTarget, {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          width: 320,
+        });
+      } catch (qrErr) {
+        console.error("클라이언트 QR 생성 실패:", qrErr);
+      }
+    }
 
     goToScreen("finish");
 
     const qrImg = document.getElementById("qr-image");
-    if (qrImg && data.qrCodeDataUrl) {
-      qrImg.src = data.qrCodeDataUrl;
+    if (qrImg) {
+      if (qrUrl) {
+        qrImg.src = qrUrl;
+        qrImg.style.display = "block";
+      } else {
+        qrImg.style.display = "none";
+      }
+    }
+
+    // 다이렉트 저장 링크 설정
+    const directDl = document.getElementById("direct-download-link");
+    if (directDl && state.finalImageBase64) {
+      directDl.href = state.finalImageBase64;
+      directDl.download = `life4cut_${Date.now()}.jpg`;
+      directDl.style.display = "inline-block";
     }
 
     const statusMsg = document.getElementById("finish-status-msg");
-    if (state.printQuantity > 0) {
-      statusMsg.innerText = `포토 프린터에서 ${state.printQuantity}장이 인쇄되고 있습니다. 🖨️\n아래 QR을 스캔하여 스마트폰에도 저장하세요!`;
+    if (isServerOk && state.printQuantity > 0) {
+      statusMsg.innerText = `포토 프린터에서 ${state.printQuantity}장이 인쇄되고 있습니다. 🖨️\n스마트폰으로 QR코드를 스캔하여 저장하세요!`;
     } else {
-      statusMsg.innerText = "아래 QR코드를 스캔하여 스마트폰에 사진을 저장하세요! 📱";
+      statusMsg.innerText = "스마트폰으로 QR을 스캔하거나 아래 링크로 저장하세요! 📱";
     }
 
-    startAutoResetTimer(15);
+    startAutoResetTimer(20);
   } catch (err) {
     console.error("최종 처리 오류:", err);
-    alert("처리 도중 오류가 발생했습니다. 담당자에게 문의해주세요.");
+    goToScreen("finish");
+    const directDl = document.getElementById("direct-download-link");
+    if (directDl && state.finalImageBase64) {
+      directDl.href = state.finalImageBase64;
+      directDl.download = `life4cut_${Date.now()}.jpg`;
+      directDl.style.display = "inline-block";
+    }
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerHTML = `<i data-lucide="qr-code"></i> <span>인쇄 & QR코드 받기</span>`;
+    if (window.lucide) lucide.createIcons();
   }
 }
 
