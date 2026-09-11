@@ -607,7 +607,7 @@ function captureCurrentFrame() {
   }
 
   ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-  return tempCanvas.toDataURL("image/jpeg", 0.95);
+  return tempCanvas.toDataURL("image/jpeg", 0.88);
 }
 
 function sleep(ms) {
@@ -743,7 +743,7 @@ async function renderLife4CutCanvas() {
     });
   }
 
-  state.finalImageBase64 = canvas.toDataURL("image/jpeg", 0.95);
+  state.finalImageBase64 = canvas.toDataURL("image/jpeg", 0.88);
 }
 
 // 배경 렌더링

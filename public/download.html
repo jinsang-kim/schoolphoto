@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>인생네컷 사진 다운로드</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 { font-size: 22px; font-weight: 800; color: #38bdf8; margin-bottom: 4px; }
+    .header p { font-size: 14px; color: #94a3b8; }
+    .preview-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 12px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      max-width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .preview-card img { max-width: 100%; max-height: 60vh; border-radius: 8px; display: block; }
+    .action-group { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
+    .download-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      text-decoration: none;
+      font-size: 18px;
+      font-weight: 700;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+    }
+    .tip { font-size: 13px; color: #64748b; text-align: center; line-height: 1.5; }
+    .not-found { text-align: center; padding: 40px 20px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>✨ 인생네컷 다운로드 ✨</h1>
+    <p>소중한 추억을 스마트폰에 저장해보세요!</p>
+  </div>
+
+  <div class="preview-card" id="card-box">
+    <img id="photo-img" src="" alt="인생네컷 사진" style="display: none;">
+    <div id="loading-msg" style="padding: 40px 20px; color: #94a3b8;">사진을 불러오는 중입니다...</div>
+  </div>
+
+  <div class="action-group" id="action-box" style="display: none;">
+    <a id="dl-btn" href="#" download="life4cut_photo.jpg" class="download-btn">
+      💾 고화질 사진 저장하기
+    </a>
+    <p class="tip">※ 아이폰/갤럭시: 사진을 길게 누른 후 '사진 앱에 저장'을 터치하셔도 됩니다.</p>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const imgUrl = params.get('img');
+    const file = params.get('file');
+
+    const photoImg = document.getElementById('photo-img');
+    const loadingMsg = document.getElementById('loading-msg');
+    const actionBox = document.getElementById('action-box');
+    const dlBtn = document.getElementById('dl-btn');
+
+    let targetSrc = '';
+    if (imgUrl) {
+      targetSrc = imgUrl;
+    } else if (file) {
+      targetSrc = '/uploads/' + file;
+    }
+
+    if (targetSrc) {
+      photoImg.src = targetSrc;
+      photoImg.onload = () => {
+        loadingMsg.style.display = 'none';
+        photoImg.style.display = 'block';
+        actionBox.style.display = 'flex';
+        dlBtn.href = targetSrc;
+      };
+      photoImg.onerror = () => {
+        loadingMsg.innerText = '사진을 찾을 수 없습니다 😢';
+      };
+    } else {
+      loadingMsg.innerText = '사진 링크가 올바르지 않습니다.';
+    }
+  </script>
+</body>
+</html>

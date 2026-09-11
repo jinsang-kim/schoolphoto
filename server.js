@@ -231,6 +231,50 @@ app.get("/download/:fileName", (req, res) => {
   `);
 });
 
+// 무료 클라우드 이미지 CDN 업로드 함수 (Vercel 서버리스 환경 지원)
+async function uploadToCloudCDN(base64Data) {
+  // 1. ImgBB 업로드 시도
+  try {
+    const params = new URLSearchParams();
+    params.append("image", base64Data);
+    const res = await fetch("https://api.imgbb.com/1/upload?key=41dc94f09d8d6dc3e3a9c69d80d2105a", {
+      method: "POST",
+      body: params,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    const json = await res.json();
+    if (json.data && json.data.url) {
+      console.log("[CLOUD CDN] ImgBB 업로드 성공:", json.data.url);
+      return json.data.url;
+    }
+  } catch (e1) {
+    console.warn("ImgBB 업로드 알림:", e1.message);
+  }
+
+  // 2. FreeImage.host 업로드 시도
+  try {
+    const params = new URLSearchParams();
+    params.append("key", "6d207e02198a847aa98d0a2a901485a5");
+    params.append("action", "upload");
+    params.append("source", base64Data);
+    params.append("format", "json");
+    const res = await fetch("https://freeimage.host/api/1/upload", {
+      method: "POST",
+      body: params,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    const json = await res.json();
+    if (json.image && json.image.url) {
+      console.log("[CLOUD CDN] FreeImage 업로드 성공:", json.image.url);
+      return json.image.url;
+    }
+  } catch (e2) {
+    console.warn("FreeImage 업로드 알림:", e2.message);
+  }
+
+  return null;
+}
+
 // 3. 사진 저장 및 처리 API (QR 코드 생성 & 인쇄)
 app.post("/api/complete", async (req, res) => {
   try {
@@ -255,11 +299,20 @@ app.post("/api/complete", async (req, res) => {
     memoryPhotos.set(fileName, buffer);
     const photoUrl = `/uploads/${fileName}`;
 
-    // 스마트폰 스캔용 다운로드 URL
+    // 스마트폰 스캔용 다운로드 URL (클라우드 CDN 또는 로컬 서버 URL)
     const reqHost = req.get("host") || `${localIp}:${PORT}`;
     const protocol = req.headers["x-forwarded-proto"] || req.protocol || (req.secure ? "https" : "http");
     const actualHost = (reqHost.includes("localhost") || reqHost.includes("127.0.0.1")) ? `${localIp}:${PORT}` : reqHost;
-    const downloadUrl = `${protocol}://${actualHost}/download/${fileName}`;
+    
+    let downloadUrl = `${protocol}://${actualHost}/download.html?file=${fileName}`;
+
+    // Vercel 또는 클라우드 환경에서는 영구 CDN URL 우선 적용
+    if (process.env.VERCEL || actualHost.includes("vercel.app") || !actualHost.includes(localIp)) {
+      const cloudUrl = await uploadToCloudCDN(base64Data);
+      if (cloudUrl) {
+        downloadUrl = `${protocol}://${actualHost}/download.html?img=${encodeURIComponent(cloudUrl)}`;
+      }
+    }
 
     // QR 코드 이미지(Data URL) 생성
     const qrCodeDataUrl = await QRCode.toDataURL(downloadUrl, {
