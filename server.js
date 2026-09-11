@@ -42,16 +42,39 @@ app.get("/uploads/:fileName", (req, res) => {
   res.status(404).send("사진을 찾을 수 없습니다.");
 });
 
-// 로컬 IPv4 주소 자동 탐지 함수
+// 로컬 IPv4 주소 자동 탐지 함수 (가상 어댑터 및 내부 서브넷 필터링)
 function getLocalIpAddress() {
   const interfaces = os.networkInterfaces();
+  const candidates = [];
+
   for (const name of Object.keys(interfaces)) {
+    const nameLower = name.toLowerCase();
+    // 가상 네트워크, WSL, 루프백, 블루투스 등 제외
+    if (nameLower.includes("virtual") || nameLower.includes("vethernet") || nameLower.includes("pseudo") || nameLower.includes("loopback") || nameLower.includes("bluetooth")) {
+      continue;
+    }
+
     for (const iface of interfaces[name]) {
       if (iface.family === "IPv4" && !iface.internal) {
-        return iface.address;
+        const addr = iface.address;
+        // APIPA(169.254.x.x) 및 로컬호스트 제외
+        if (addr.startsWith("169.254.") || addr.startsWith("127.")) {
+          continue;
+        }
+        candidates.push({ name, addr });
       }
     }
   }
+
+  // 1순위: 학교/공유기 일반 사설망 (10.x.x.x 또는 192.168.x.x)
+  const priority1 = candidates.find(c => c.addr.startsWith("10.") || c.addr.startsWith("192.168."));
+  if (priority1) return priority1.addr;
+
+  // 2순위: 172.x.x.x 가 아닌 실제 이더넷/Wi-Fi
+  const priority2 = candidates.find(c => !c.addr.startsWith("172."));
+  if (priority2) return priority2.addr;
+
+  if (candidates.length > 0) return candidates[0].addr;
   return "localhost";
 }
 
