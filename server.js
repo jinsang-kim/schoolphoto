@@ -299,19 +299,24 @@ app.post("/api/complete", async (req, res) => {
     memoryPhotos.set(fileName, buffer);
     const photoUrl = `/uploads/${fileName}`;
 
-    // 스마트폰 스캔용 다운로드 URL (클라우드 CDN 또는 로컬 서버 URL)
+    // 스마트폰 스캔용 다운로드 URL (스마트폰이 LTE/5G 어디서든 받을 수 있도록 글로벌 CDN 우선 적용)
     const reqHost = req.get("host") || `${localIp}:${PORT}`;
     const protocol = req.headers["x-forwarded-proto"] || req.protocol || (req.secure ? "https" : "http");
     const actualHost = (reqHost.includes("localhost") || reqHost.includes("127.0.0.1")) ? `${localIp}:${PORT}` : reqHost;
     
     let downloadUrl = `${protocol}://${actualHost}/download.html?file=${fileName}`;
 
-    // Vercel 또는 클라우드 환경에서는 영구 CDN URL 우선 적용
-    if (process.env.VERCEL || actualHost.includes("vercel.app") || !actualHost.includes(localIp)) {
+    // ⭐️ 로컬 / Vercel 상관없이 클라우드 CDN 업로드 우선 시도 (스마트폰 LTE/5G에서도 즉시 다운로드 가능)
+    try {
       const cloudUrl = await uploadToCloudCDN(base64Data);
       if (cloudUrl) {
-        downloadUrl = `${protocol}://${actualHost}/download.html?img=${encodeURIComponent(cloudUrl)}`;
+        downloadUrl = `https://schoolphoto.vercel.app/download.html?img=${encodeURIComponent(cloudUrl)}`;
+        console.log(`[QR CODE URL] 글로벌 다운로드 링크 생성 완료: ${downloadUrl}`);
+      } else {
+        console.log(`[QR CODE URL] 로컬 네트워크 다운로드 링크 사용: ${downloadUrl}`);
       }
+    } catch (cdnErr) {
+      console.warn("클라우드 CDN 연동 알림 (로컬 URL 사용):", cdnErr.message);
     }
 
     // QR 코드 이미지(Data URL) 생성
