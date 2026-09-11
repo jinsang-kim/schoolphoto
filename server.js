@@ -89,20 +89,47 @@ app.post("/api/config/printer", (req, res) => {
 app.get("/api/printers", (req, res) => {
   if (process.platform !== "win32") {
     return res.json({
-      printers: [currentPrinterName, "EPSON L15150 Series", "Canon SELPHY CP1500", "Microsoft Print to PDF"]
+      printers: [currentPrinterName, "EPSON L15150 Series", "EPSON L8050 Series", "Canon SELPHY CP1500", "Microsoft Print to PDF"]
     });
   }
 
   exec('powershell -Command "Get-CimInstance Win32_Printer | Select-Object -ExpandProperty Name"', (err, stdout) => {
     if (err || !stdout) {
       return res.json({
-        printers: [currentPrinterName, "EPSON L15150 Series", "Canon SELPHY CP1500", "Microsoft Print to PDF"]
+        printers: [currentPrinterName, "EPSON L15150 Series", "EPSON L8050 Series", "Canon SELPHY CP1500", "Microsoft Print to PDF"]
       });
     }
     const list = stdout.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     res.json({
       printers: list.length > 0 ? Array.from(new Set([currentPrinterName, ...list])) : [currentPrinterName]
     });
+  });
+});
+
+// 프린터 테스트 인쇄 API
+app.post("/api/test-print", (req, res) => {
+  const { printerName = currentPrinterName } = req.body;
+
+  if (process.platform !== "win32") {
+    return res.json({
+      success: false,
+      message: "Vercel 클라우드 서버에서는 로컬 USB 프린터에 직접 접근할 수 없습니다. 로컬 서버(http://10.220.29.86:3000) 또는 브라우저 인쇄창을 사용해주세요."
+    });
+  }
+
+  const psScriptPath = path.join(__dirname, "print-photo.ps1");
+  const sampleFile = fs.readdirSync(uploadDir).find(f => f.endsWith(".jpg"));
+  const samplePath = sampleFile ? path.join(uploadDir, sampleFile) : path.join(__dirname, "public", "favicon.ico");
+
+  const psCommand = `powershell -ExecutionPolicy Bypass -File "${psScriptPath}" -ImagePath "${samplePath}" -PrinterName "${printerName}" -Copies 1`;
+
+  exec(psCommand, (error, stdout, stderr) => {
+    if (error) {
+      console.error("[TEST PRINT ERROR]:", stderr || error.message);
+      return res.json({ success: false, message: `인쇄 실패: ${stderr || error.message}` });
+    }
+    console.log("[TEST PRINT SUCCESS]:", stdout.trim());
+    return res.json({ success: true, message: `프린터(${printerName})로 테스트 인쇄 전송 완료!` });
   });
 });
 

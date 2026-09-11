@@ -1208,3 +1208,71 @@ async function savePrinterSettings() {
     closeSettingsModal();
   }, 700);
 }
+
+// 🖨️ 브라우저 직접 인쇄 (AirPrint / Wi-Fi / 로컬 프린터 대화상자)
+function printFromBrowser() {
+  if (!state.finalImageBase64) {
+    alert("인쇄할 사진이 준비되지 않았습니다.");
+    return;
+  }
+
+  const printImg = document.getElementById("print-target-image");
+  if (printImg) {
+    printImg.src = state.finalImageBase64;
+  }
+
+  setTimeout(() => {
+    window.print();
+  }, 200);
+}
+
+// 🧪 선택된 프린터로 테스트 인쇄 전송
+async function testPrintCurrent() {
+  const input = document.getElementById("input-printer-name");
+  const printer = input?.value?.trim() || state.printerName;
+  const feedback = document.getElementById("printer-save-feedback");
+
+  if (!printer) {
+    alert("프린터 이름을 먼저 입력하거나 선택해 주세요.");
+    return;
+  }
+
+  if (feedback) {
+    feedback.innerText = `⏳ '${printer}'(으)로 테스트 인쇄 명령 전송 중...`;
+    feedback.style.display = "block";
+    feedback.style.background = "rgba(59, 130, 246, 0.15)";
+    feedback.style.borderColor = "rgba(59, 130, 246, 0.4)";
+    feedback.style.color = "#93c5fd";
+  }
+
+  try {
+    const res = await fetch("/api/test-print", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ printerName: printer }),
+    });
+
+    const data = await res.json();
+    if (feedback) {
+      if (data.success) {
+        feedback.innerText = `✅ ${data.message}`;
+        feedback.style.background = "rgba(34, 197, 94, 0.15)";
+        feedback.style.borderColor = "rgba(34, 197, 94, 0.4)";
+        feedback.style.color = "#4ade80";
+      } else {
+        feedback.innerText = `ℹ️ ${data.message}`;
+        feedback.style.background = "rgba(234, 179, 8, 0.15)";
+        feedback.style.borderColor = "rgba(234, 179, 8, 0.4)";
+        feedback.style.color = "#facc15";
+      }
+    }
+  } catch (err) {
+    console.warn("테스트 인쇄 오류:", err);
+    if (feedback) {
+      feedback.innerText = "ℹ️ 클라우드(Vercel) 환경에서는 브라우저 인쇄창을 이용해 주세요.";
+      feedback.style.background = "rgba(59, 130, 246, 0.15)";
+      feedback.style.borderColor = "rgba(59, 130, 246, 0.4)";
+      feedback.style.color = "#93c5fd";
+    }
+  }
+}

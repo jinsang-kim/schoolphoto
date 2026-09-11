@@ -250,9 +250,15 @@
           <span id="reset-counter">15</span>초 후 처음 화면으로 돌아갑니다.
         </div>
 
-        <button class="action-btn secondary" onclick="resetToHome()">
-          <span>처음으로 돌아가기</span>
-        </button>
+        <div class="finish-action-buttons" style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 360px;">
+          <button type="button" class="action-btn primary" onclick="printFromBrowser()">
+            <i data-lucide="printer"></i>
+            <span>🖨️ 사진 인쇄하기 (출력창 열기)</span>
+          </button>
+          <button type="button" class="action-btn secondary" onclick="resetToHome()">
+            <span>처음으로 돌아가기</span>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -289,10 +295,16 @@
             <label class="modal-sublabel">자주 쓰는 프린터 빠른 선택:</label>
             <div class="preset-chips">
               <button type="button" class="preset-chip" onclick="setPrinterInputValue('EPSON L15150 Series')">EPSON L15150 Series</button>
+              <button type="button" class="preset-chip" onclick="setPrinterInputValue('EPSON L8050 Series')">EPSON L8050 Series</button>
               <button type="button" class="preset-chip" onclick="setPrinterInputValue('Canon SELPHY CP1500')">Canon SELPHY CP1500</button>
-              <button type="button" class="preset-chip" onclick="setPrinterInputValue('Canon SELPHY CP1300')">Canon SELPHY CP1300</button>
               <button type="button" class="preset-chip" onclick="setPrinterInputValue('Microsoft Print to PDF')">PDF 가상 인쇄</button>
             </div>
+          </div>
+
+          <div class="modal-test-row" style="display: flex; justify-content: flex-end;">
+            <button type="button" class="modal-btn-sub" onclick="testPrintCurrent()" style="padding: 8px 14px;">
+              <i data-lucide="play"></i> 선택한 프린터로 테스트 인쇄 전송
+            </button>
           </div>
 
           <div id="printer-save-feedback" class="modal-feedback" style="display: none;"></div>
@@ -307,6 +319,11 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- 🖨️ 브라우저 인쇄 전용 컨테이너 (4x6 규격) -->
+  <div id="print-container" class="print-only">
+    <img id="print-target-image" src="" alt="인쇄용 사진" />
   </div>
 
   <script src="app.js"></script>
