@@ -342,6 +342,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderThemeList();
   renderFilterList();
   initPrinterConfig();
+  updateModeDisplay();
 
   // 웹폰트 로드 완료 후 캔버스 렌더링
   if (document.fonts) {
@@ -417,12 +418,58 @@ function renderFilterList() {
 
 function selectModeAndStart(mode) {
   state.layoutMode = mode;
-  const tag = document.getElementById("current-mode-tag");
-  if (tag) {
-    tag.innerText = mode === "grid" ? "태블릿 2×2 모드 (엽서형)" : "데스크탑 4×1 모드 (스트립)";
-  }
+  updateModeDisplay();
   goToScreen("theme");
   renderLiveThemePreview();
+}
+
+function updateModeDisplay() {
+  const isGrid = state.layoutMode === "grid";
+  const tag = document.getElementById("current-mode-tag");
+  if (tag) {
+    tag.innerText = isGrid ? "4×6인치 엽서형 (2×2)" : "4×6인치 스트립 (2줄)";
+  }
+
+  const ratioTag = document.getElementById("viewer-ratio-tag");
+  if (ratioTag) {
+    ratioTag.innerText = isGrid ? "4×6인치 엽서형" : "4×6인치 스트립 (2줄)";
+  }
+
+  const badge = document.getElementById("current-size-badge");
+  if (badge) {
+    badge.innerText = isGrid ? "4×6인치 엽서형 (2×2)" : "4×6인치 스트립 (2줄)";
+  }
+
+  const btnGrid = document.getElementById("btn-size-grid");
+  const btnStrip = document.getElementById("btn-size-strip");
+  if (btnGrid) btnGrid.classList.toggle("active", isGrid);
+  if (btnStrip) btnStrip.classList.toggle("active", !isGrid);
+
+  const cardGrid = document.getElementById("card-mode-grid");
+  const cardStrip = document.getElementById("card-mode-strip");
+  if (cardGrid) cardGrid.classList.toggle("active-pulse", isGrid);
+  if (cardStrip) cardStrip.classList.toggle("active-pulse", !isGrid);
+
+  const hint = document.getElementById("print-layout-hint");
+  if (hint) {
+    hint.innerText = isGrid
+      ? "※ 4×6인치(10×15cm) 엽서형 포토 인화지로 인쇄됩니다."
+      : "※ 4×6인치 인화지에 2줄로 인쇄되어 친구와 반 잘라 나눌 수 있습니다.";
+  }
+}
+
+// ⭐️ 결과 화면에서 사진 사이즈 실시간 변경 (4×6 엽서형 vs 4×6 스트립)
+async function changePhotoSize(newMode) {
+  if (state.layoutMode === newMode) return;
+  state.layoutMode = newMode;
+  updateModeDisplay();
+
+  showToast(newMode === "grid" ? "📐 4×6인치 엽서형(2×2)으로 변경되었습니다." : "📐 4×6인치 스트립(2줄)으로 변경되었습니다.");
+
+  // 촬영된 사진이 있으면 실시간 재합성
+  if (state.capturedImages && state.capturedImages.length > 0) {
+    await renderLife4CutCanvas();
+  }
 }
 
 function goToScreen(screenName) {
@@ -1712,6 +1759,101 @@ async function savePrinterSettings() {
   }, 700);
 }
 
+// 📱 태블릿 / 모바일 엡손(Epson) 앱 연동 인쇄
+async function printViaEpsonApp() {
+  if (!state.finalImageBase64) {
+    alert("인쇄할 사진이 준비되지 않았습니다.");
+    return;
+  }
+
+  const isGrid = state.layoutMode === "grid";
+  const sizeName = isGrid ? "4x6인치_엽서형" : "4x6인치_스트립";
+  const fileName = `청춘네컷_${sizeName}_${Date.now()}.jpg`;
+
+  try {
+    const res = await fetch(state.finalImageBase64);
+    const blob = await res.blob();
+    const file = new File([blob], fileName, { type: "image/jpeg" });
+
+    // 1. 태블릿 Web Share API (iPad Safari, Android Galaxy Tab Chrome 등)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: "인생네컷 4×6인치 사진 인쇄",
+          text: "Epson Smart Panel 또는 Epson iPrint 앱을 선택하여 4×6인치(10×15cm)로 인쇄하세요!",
+        });
+        showToast("📱 엡손 앱을 선택하여 인쇄를 진행해 주세요!");
+        return;
+      } catch (shareErr) {
+        if (shareErr.name === "AbortError") {
+          return; // 사용자가 창을 닫음
+        }
+        console.warn("Web Share 오류:", shareErr);
+      }
+    }
+
+    // 2. Web Share 미지원 브라우저 또는 PC: 파일 즉시 저장 + 엡손 앱 안내 팝업
+    savePhotoToDevice();
+    openEpsonGuideModal();
+  } catch (err) {
+    console.error("엡손 인쇄 처리 실패:", err);
+    savePhotoToDevice();
+    openEpsonGuideModal();
+  }
+}
+
+// 💾 태블릿 / 기기에 사진 직접 저장
+function savePhotoToDevice() {
+  if (!state.finalImageBase64) return;
+  const isGrid = state.layoutMode === "grid";
+  const sizeName = isGrid ? "4x6인치_엽서형" : "4x6인치_스트립";
+  const link = document.createElement("a");
+  link.href = state.finalImageBase64;
+  link.download = `청춘네컷_${sizeName}_${Date.now()}.jpg`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  showToast("💾 4×6인치 사진이 기기에 저장되었습니다!\n앱손(Epson) 앱의 '사진 인쇄'에서 선택해 출력하세요.");
+}
+
+// 📱 엡손 앱 안내 모달 제어
+function openEpsonGuideModal() {
+  const modal = document.getElementById("modal-epson-guide");
+  if (modal) {
+    modal.classList.remove("hidden");
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+function closeEpsonGuideModal() {
+  const modal = document.getElementById("modal-epson-guide");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+}
+
+function handleEpsonGuideOverlayClick(event) {
+  if (event.target && event.target.id === "modal-epson-guide") {
+    closeEpsonGuideModal();
+  }
+}
+
+// 🔔 토스트 알림 메시지
+let toastTimer = null;
+function showToast(message) {
+  const toast = document.getElementById("app-toast");
+  if (!toast) return;
+
+  toast.innerText = message;
+  toast.classList.remove("hidden");
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.add("hidden");
+  }, 3200);
+}
 // 🖨️ 브라우저 직접 인쇄 (AirPrint / Wi-Fi / 로컬 프린터 대화상자)
 function printFromBrowser() {
   if (!state.finalImageBase64) {

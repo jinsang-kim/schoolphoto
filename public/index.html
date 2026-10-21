@@ -37,11 +37,31 @@
       <div class="home-content">
         <div class="badge"><i data-lucide="sparkles"></i> 합천여자고등학교 • 독도의 날 & 세계 문화 다양성의 날</div>
         <h1 class="main-title">우리들의 청춘네컷</h1>
-        <p class="main-desc">촬영할 레이아웃 모드를 선택해 주세요!</p>
+        <p class="main-desc">사진 사이즈와 레이아웃을 선택해 주세요! (기본: 4×6인치 포토 인화지)</p>
         
-        <!-- 모드 선택 카드 -->
+        <!-- 모드 / 사진 사이즈 선택 카드 -->
         <div class="mode-select-grid">
-          <div class="mode-card" onclick="selectModeAndStart('strip')">
+          <div class="mode-card active-pulse" id="card-mode-grid" onclick="selectModeAndStart('grid')">
+            <div class="mode-preview-box grid-preview">
+              <div class="grid-row">
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+              </div>
+              <div class="grid-row">
+                <div class="mini-cut"></div>
+                <div class="mini-cut"></div>
+              </div>
+            </div>
+            <div class="mode-info">
+              <span class="mode-badge tablet-badge">✨ 엡손 포토프린터 추천</span>
+              <h3>4×6인치 엽서형</h3>
+              <p class="size-spec">10×15 cm (102×152 mm)</p>
+              <p>2×2 와이드 4컷 꽉 찬 규격<br>(태블릿 & 엡손 인화지 최적화)</p>
+            </div>
+            <button class="mode-start-btn primary">선택하기 <i data-lucide="chevron-right"></i></button>
+          </div>
+
+          <div class="mode-card" id="card-mode-strip" onclick="selectModeAndStart('strip')">
             <div class="mode-preview-box strip-preview">
               <div class="strip-col">
                 <div class="mini-cut"></div>
@@ -57,37 +77,19 @@
               </div>
             </div>
             <div class="mode-info">
-              <span class="mode-badge">클래식 스트립</span>
-              <h3>데스크탑 모드</h3>
-              <p>세로 4컷 × 2줄 분할 출력<br>(친구와 반 잘라 나눠갖기)</p>
+              <span class="mode-badge">클래식 4×6 2줄</span>
+              <h3>4×6인치 스트립</h3>
+              <p class="size-spec">2×6인치 × 2개 (10×15 cm)</p>
+              <p>4×6 인화지 한 장에 2줄 출력<br>(친구와 반 잘라 나눠갖기)</p>
             </div>
-            <button class="mode-start-btn">시작하기 <i data-lucide="chevron-right"></i></button>
-          </div>
-
-          <div class="mode-card active-pulse" onclick="selectModeAndStart('grid')">
-            <div class="mode-preview-box grid-preview">
-              <div class="grid-row">
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
-              </div>
-              <div class="grid-row">
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
-              </div>
-            </div>
-            <div class="mode-info">
-              <span class="mode-badge tablet-badge">✨ 태블릿 추천 ✨</span>
-              <h3>태블릿 모드</h3>
-              <p>2×2 엽서형 4분할 출력<br>(태블릿에 꽉 차는 와이드 뷰)</p>
-            </div>
-            <button class="mode-start-btn primary">시작하기 <i data-lucide="chevron-right"></i></button>
+            <button class="mode-start-btn">선택하기 <i data-lucide="chevron-right"></i></button>
           </div>
         </div>
 
         <div class="quick-info">
-          <span><i data-lucide="type"></i> 볼드 & 감성 캘리그라피 타이포그래피</span>
+          <span><i data-lucide="printer"></i> 4×6인치 포토 인화 (앱손 앱 지원)</span>
           <span>•</span>
-          <span><i data-lucide="printer"></i> 즉석 포토 인쇄</span>
+          <span><i data-lucide="tablet"></i> 태블릿 무선 인쇄</span>
           <span>•</span>
           <span><i data-lucide="qr-code"></i> 스마트폰 QR 다운로드</span>
         </div>
@@ -100,7 +102,7 @@
         <button class="back-btn" onclick="goToScreen('home')"><i data-lucide="arrow-left"></i></button>
         <div>
           <h2>스타일 & 필터 설정</h2>
-          <span class="header-mode-tag" id="current-mode-tag">태블릿 2×2 모드</span>
+          <span class="header-mode-tag" id="current-mode-tag">4×6인치 엽서형 (2×2)</span>
         </div>
         <div style="width: 36px;"></div>
       </div>
@@ -110,14 +112,14 @@
         <!-- 왼쪽: 실시간 완성 프레임 라이브 뷰어 -->
         <div class="live-frame-viewer-card">
           <div class="viewer-header">
-            <span class="live-badge"><i data-lucide="eye"></i> 인쇄 완성본 실시간 미리보기</span>
+            <span class="live-badge"><i data-lucide="eye"></i> 4×6인치 인쇄 완성본 실시간 미리보기</span>
           </div>
           <div class="live-canvas-container">
             <canvas id="theme-live-preview-canvas"></canvas>
           </div>
           <div class="viewer-footer">
             <span id="selected-theme-badge-name">독도의 날 • 찬란한 일출 🌅</span>
-            <span class="ratio-tag">4×6인치 규격</span>
+            <span class="ratio-tag" id="viewer-ratio-tag">4×6인치 (10×15cm)</span>
           </div>
         </div>
 
@@ -191,13 +193,55 @@
             <i data-lucide="check-circle" class="text-green"></i>
             <div>
               <h4>사진 4장이 멋지게 완성되었습니다!</h4>
-              <p>인쇄 매수를 선택하고 완료를 눌러주세요.</p>
+              <p>사이즈를 확인하고 인쇄 방식을 선택해 주세요.</p>
             </div>
           </div>
 
+          <!-- 1. 사진 사이즈 선택 토글 (4×6인치 엽서형 / 4×6인치 스트립) -->
+          <div class="form-group size-select-box">
+            <div class="print-header-row">
+              <label class="form-label"><i data-lucide="aspect-ratio"></i> 사진 사이즈 & 규격</label>
+              <span class="size-badge-pill" id="current-size-badge">4×6인치 (10×15cm)</span>
+            </div>
+            <div class="size-selector-grid">
+              <button type="button" class="size-btn active" id="btn-size-grid" onclick="changePhotoSize('grid')">
+                <span class="size-btn-title">4×6인치 엽서형</span>
+                <span class="size-btn-sub">2×2 와이드 4컷</span>
+              </button>
+              <button type="button" class="size-btn" id="btn-size-strip" onclick="changePhotoSize('strip')">
+                <span class="size-btn-title">4×6인치 스트립</span>
+                <span class="size-btn-sub">2×6 2줄 분할</span>
+              </button>
+            </div>
+            <p class="field-hint" id="print-layout-hint">※ 언제든 탭하여 실시간으로 4×6인치 레이아웃을 바꿀 수 있습니다.</p>
+          </div>
+
+          <!-- 2. 📱 태블릿 엡손(Epson) 앱 무선 인쇄 카드 -->
+          <div class="epson-print-card">
+            <div class="epson-card-header">
+              <span class="epson-tag"><i data-lucide="tablet"></i> 태블릿 & 엡손(Epson) 앱 인쇄</span>
+              <button type="button" class="epson-guide-link-btn" onclick="openEpsonGuideModal()">
+                <i data-lucide="help-circle"></i> 앱 인쇄 안내
+              </button>
+            </div>
+            <button type="button" class="action-btn epson-main-btn" onclick="printViaEpsonApp()">
+              <i data-lucide="share-2"></i>
+              <span>📱 엡손(Epson) 앱으로 바로 인쇄</span>
+            </button>
+            <div class="epson-quick-row">
+              <button type="button" class="epson-sub-btn" onclick="savePhotoToDevice()">
+                <i data-lucide="download"></i> <span>💾 4×6 사진 저장</span>
+              </button>
+              <button type="button" class="epson-sub-btn" onclick="printFromBrowser()">
+                <i data-lucide="printer"></i> <span>🖨️ 브라우저 인쇄</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. PC 프린터 즉석 인쇄 & 스마트폰 QR 받기 -->
           <div class="form-group print-select-box">
             <div class="print-header-row">
-              <label class="form-label"><i data-lucide="printer"></i> 인쇄 수량 선택</label>
+              <label class="form-label"><i data-lucide="printer"></i> PC 포토프린터 자동 인쇄</label>
               <button type="button" class="btn-printer-badge" onclick="openSettingsModal()" title="프린터 변경">
                 <i data-lucide="printer"></i> <span id="current-printer-display">EPSON L15150 Series</span> <i data-lucide="edit-3" class="edit-icon"></i>
               </button>
@@ -207,17 +251,16 @@
               <button class="qty-btn" onclick="setPrintQty(2, this)">2장</button>
               <button class="qty-btn" onclick="setPrintQty(0, this)">QR만 받기</button>
             </div>
-            <p class="field-hint" id="print-layout-hint">※ 4×6인치 규격 포토 인화지로 즉석 출력됩니다.</p>
           </div>
 
           <div class="action-buttons-group">
+            <button class="action-btn primary" id="submit-complete-btn" onclick="submitFinal()">
+              <i data-lucide="qr-code"></i>
+              <span>PC 프린터 인쇄 & 스마트폰 QR 받기</span>
+            </button>
             <button class="action-btn secondary" onclick="retakePhotos()">
               <i data-lucide="rotate-ccw"></i>
               <span>다시 촬영하기</span>
-            </button>
-            <button class="action-btn primary" id="submit-complete-btn" onclick="submitFinal()">
-              <i data-lucide="qr-code"></i>
-              <span>인쇄 & QR코드 받기</span>
             </button>
           </div>
         </div>
@@ -239,22 +282,30 @@
           </div>
           <div class="qr-instructions">
             <div class="qr-badge"><i data-lucide="smartphone"></i> 스마트폰 카메라로 스캔하세요</div>
-            <p id="qr-desc-text">기본 카메라로 위 QR을 비추면<br><strong>고화질 원본 사진이 다운로드</strong>됩니다.</p>
-            <a id="direct-download-link" href="#" download="life4cut_photo.jpg" class="direct-dl-btn" style="display: none; margin-top: 10px; color: #38bdf8; text-decoration: underline; font-size: 14px; font-weight: 600;">
-              💾 이 기기/브라우저에 바로 저장하기
+            <p id="qr-desc-text">기본 카메라로 위 QR을 비추면<br><strong>고화질 4×6인치 원본 사진이 다운로드</strong>됩니다.</p>
+            <a id="direct-download-link" href="#" download="life4cut_4x6_photo.jpg" class="direct-dl-btn" style="display: none; margin-top: 10px; color: #38bdf8; text-decoration: underline; font-size: 14px; font-weight: 600;">
+              💾 이 기기/브라우저에 4×6 사진 바로 저장하기
             </a>
           </div>
         </div>
 
         <div class="auto-reset-timer">
-          <span id="reset-counter">15</span>초 후 처음 화면으로 돌아갑니다.
+          <span id="reset-counter">20</span>초 후 처음 화면으로 돌아갑니다.
         </div>
 
         <div class="finish-action-buttons" style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 360px;">
-          <button type="button" class="action-btn primary" onclick="printFromBrowser()">
-            <i data-lucide="printer"></i>
-            <span>🖨️ 사진 인쇄하기 (출력창 열기)</span>
+          <button type="button" class="action-btn epson-main-btn" onclick="printViaEpsonApp()">
+            <i data-lucide="share-2"></i>
+            <span>📱 엡손(Epson) 앱으로 바로 인쇄 / 공유</span>
           </button>
+          <div style="display: flex; gap: 8px; width: 100%;">
+            <button type="button" class="action-btn secondary" style="flex: 1; padding: 10px 8px; font-size: 13px;" onclick="savePhotoToDevice()">
+              <i data-lucide="download"></i> <span>💾 4×6 사진 저장</span>
+            </button>
+            <button type="button" class="action-btn secondary" style="flex: 1; padding: 10px 8px; font-size: 13px;" onclick="printFromBrowser()">
+              <i data-lucide="printer"></i> <span>🖨️ 브라우저 인쇄</span>
+            </button>
+          </div>
           <button type="button" class="action-btn secondary" onclick="resetToHome()">
             <span>처음으로 돌아가기</span>
           </button>
@@ -318,6 +369,64 @@
         </div>
       </div>
     </div>
+
+    <!-- 📱 태블릿 엡손(Epson) 앱 인쇄 안내 모달 -->
+    <div id="modal-epson-guide" class="modal-overlay hidden" onclick="handleEpsonGuideOverlayClick(event)">
+      <div class="modal-card epson-guide-modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <i data-lucide="tablet" style="color: #38bdf8;"></i>
+            <h3>태블릿 엡손(Epson) 앱 인쇄 방법</h3>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="closeEpsonGuideModal()">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="epson-steps-list">
+            <div class="epson-step-item">
+              <div class="step-num-badge">1</div>
+              <div class="step-content">
+                <h4>[📱 엡손 앱으로 바로 인쇄] 버튼 터치</h4>
+                <p>태블릿의 공유 창이 뜨면 <strong>Epson Smart Panel</strong> 또는 <strong>Epson iPrint</strong> 앱을 선택합니다.</p>
+              </div>
+            </div>
+            <div class="epson-step-item">
+              <div class="step-num-badge">2</div>
+              <div class="step-content">
+                <h4>용지 크기 4×6인치 확인</h4>
+                <p>용지 크기: <strong>4×6인치 (10×15cm / KG)</strong> 선택<br>용지 종류: <strong>포토용지(광택/인화지)</strong> 선택</p>
+              </div>
+            </div>
+            <div class="epson-step-item">
+              <div class="step-num-badge">3</div>
+              <div class="step-content">
+                <h4>[인쇄] 터치하여 즉시 출력!</h4>
+                <p>Wi-Fi로 연결된 엡손 프린터에서 선명한 4×6인치 인생네컷이 출력됩니다.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="epson-guide-tip-box">
+            <div class="tip-title"><i data-lucide="info"></i> 앱이 공유 창에 바로 보이지 않으신가요?</div>
+            <p>1. <strong>[💾 4×6 사진 저장]</strong> 버튼을 눌러 사진을 태블릿 갤러리에 저장합니다.<br>
+               2. 태블릿에서 <strong>Epson Smart Panel</strong> 또는 <strong>Epson iPrint</strong> 앱을 실행합니다.<br>
+               3. <strong>'사진 인쇄'</strong> 메뉴에서 저장된 사진을 선택하고 4×6인치로 인쇄하세요!</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="action-btn secondary modal-action" onclick="savePhotoToDevice()">
+            <i data-lucide="download"></i> <span>사진 갤러리에 저장</span>
+          </button>
+          <button type="button" class="action-btn primary modal-action" onclick="closeEpsonGuideModal()">
+            <i data-lucide="check"></i> <span>확인했습니다</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 토스트 알림 메시지 바 -->
+    <div id="app-toast" class="app-toast hidden"></div>
 
   </div>
 

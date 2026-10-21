@@ -871,6 +871,268 @@ body {
 
 .text-green { color: #22c55e; }
 
+/* 사진 규격 사양 텍스트 */
+.size-spec {
+  font-size: 11px;
+  color: #38bdf8;
+  font-weight: 700;
+  margin-top: -2px;
+}
+
+/* 4x6 사이즈 선택기 박스 */
+.size-select-box {
+  background: var(--card-bg);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.size-badge-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.size-selector-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.size-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.size-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #64748b;
+}
+
+.size-btn.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(37, 99, 235, 0.25));
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.size-btn-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: white;
+}
+
+.size-btn.active .size-btn-title {
+  color: #38bdf8;
+}
+
+.size-btn-sub {
+  font-size: 10.5px;
+  color: var(--text-sub);
+}
+
+/* 📱 엡손(Epson) 앱 무선 인쇄 전용 카드 */
+.epson-print-card {
+  background: linear-gradient(135deg, rgba(2, 44, 115, 0.4), rgba(15, 23, 42, 0.7));
+  border: 1.5px solid rgba(56, 189, 248, 0.45);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(2, 44, 115, 0.3);
+}
+
+.epson-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.epson-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #7dd3fc;
+}
+
+.epson-guide-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: #93c5fd;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 2px 4px;
+}
+
+.epson-guide-link-btn:hover {
+  color: #ffffff;
+}
+
+.action-btn.epson-main-btn {
+  background: linear-gradient(135deg, #0284c7, #003399);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 51, 153, 0.45);
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 800;
+  width: 100%;
+}
+
+.action-btn.epson-main-btn:active {
+  transform: scale(0.98);
+}
+
+.epson-quick-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.epson-sub-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  padding: 7px 6px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.epson-sub-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: white;
+  border-color: #38bdf8;
+}
+
+/* 엡손 앱 사용법 모달 */
+.epson-guide-modal-card {
+  max-width: 520px;
+}
+
+.epson-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.epson-step-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.step-num-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0284c7;
+  color: white;
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.step-content h4 {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 3px;
+}
+
+.step-content p {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.epson-guide-tip-box {
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.epson-guide-tip-box .tip-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fde047;
+  margin-bottom: 4px;
+}
+
+.epson-guide-tip-box p {
+  font-size: 11.5px;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+/* 토스트 알림 메시지 */
+.app-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.94);
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1.5px solid #38bdf8;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+  font-weight: 700;
+  z-index: 1000000;
+  pointer-events: none;
+  white-space: pre-line;
+  text-align: center;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.app-toast.hidden {
+  opacity: 0;
+  transform: translate(-50%, 20px);
+}
+
 .print-select-box {
   background: var(--card-bg);
   padding: 12px;
