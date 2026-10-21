@@ -216,24 +216,24 @@
             <p class="field-hint" id="print-layout-hint">※ 언제든 탭하여 실시간으로 4×6인치 레이아웃을 바꿀 수 있습니다.</p>
           </div>
 
-          <!-- 2. 📱 태블릿 엡손(Epson) 앱 무선 인쇄 카드 -->
+          <!-- 2. 📱 태블릿 Epson Smart Panel 앱 무선 인쇄 카드 -->
           <div class="epson-print-card">
             <div class="epson-card-header">
-              <span class="epson-tag"><i data-lucide="tablet"></i> 태블릿 & 엡손(Epson) 앱 인쇄</span>
+              <span class="epson-tag"><i data-lucide="tablet"></i> 태블릿 Epson Smart Panel 인쇄</span>
               <button type="button" class="epson-guide-link-btn" onclick="openEpsonGuideModal()">
-                <i data-lucide="help-circle"></i> 앱 인쇄 안내
+                <i data-lucide="help-circle"></i> 앱 인쇄 방법
               </button>
             </div>
             <button type="button" class="action-btn epson-main-btn" onclick="printViaEpsonApp()">
-              <i data-lucide="share-2"></i>
-              <span>📱 엡손(Epson) 앱으로 바로 인쇄</span>
+              <i data-lucide="printer"></i>
+              <span>📱 Epson Smart Panel로 인쇄하기</span>
             </button>
             <div class="epson-quick-row">
               <button type="button" class="epson-sub-btn" onclick="savePhotoToDevice()">
-                <i data-lucide="download"></i> <span>💾 4×6 사진 저장</span>
+                <i data-lucide="download"></i> <span>💾 4×6 사진 갤러리 저장</span>
               </button>
-              <button type="button" class="epson-sub-btn" onclick="printFromBrowser()">
-                <i data-lucide="printer"></i> <span>🖨️ 브라우저 인쇄</span>
+              <button type="button" class="epson-sub-btn" onclick="launchEpsonSmartPanelApp()">
+                <i data-lucide="external-link"></i> <span>🚀 앱 바로 열기</span>
               </button>
             </div>
           </div>
@@ -295,17 +295,20 @@
 
         <div class="finish-action-buttons" style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 360px;">
           <button type="button" class="action-btn epson-main-btn" onclick="printViaEpsonApp()">
-            <i data-lucide="share-2"></i>
-            <span>📱 엡손(Epson) 앱으로 바로 인쇄 / 공유</span>
+            <i data-lucide="printer"></i>
+            <span>📱 Epson Smart Panel로 인쇄하기</span>
           </button>
           <div style="display: flex; gap: 8px; width: 100%;">
             <button type="button" class="action-btn secondary" style="flex: 1; padding: 10px 8px; font-size: 13px;" onclick="savePhotoToDevice()">
               <i data-lucide="download"></i> <span>💾 4×6 사진 저장</span>
             </button>
-            <button type="button" class="action-btn secondary" style="flex: 1; padding: 10px 8px; font-size: 13px;" onclick="printFromBrowser()">
-              <i data-lucide="printer"></i> <span>🖨️ 브라우저 인쇄</span>
+            <button type="button" class="action-btn secondary" style="flex: 1; padding: 10px 8px; font-size: 13px;" onclick="launchEpsonSmartPanelApp()">
+              <i data-lucide="external-link"></i> <span>🚀 앱 바로 열기</span>
             </button>
           </div>
+          <button type="button" class="action-btn secondary" onclick="printFromBrowser()" style="padding: 10px 8px; font-size: 13px;">
+            <i data-lucide="printer"></i> <span>🖨️ 브라우저 직접 인쇄 (AirPrint/Wi-Fi)</span>
+          </button>
           <button type="button" class="action-btn secondary" onclick="resetToHome()">
             <span>처음으로 돌아가기</span>
           </button>
@@ -370,13 +373,13 @@
       </div>
     </div>
 
-    <!-- 📱 태블릿 엡손(Epson) 앱 인쇄 안내 모달 -->
+    <!-- 📱 태블릿 Epson Smart Panel 앱 인쇄 안내 모달 -->
     <div id="modal-epson-guide" class="modal-overlay hidden" onclick="handleEpsonGuideOverlayClick(event)">
       <div class="modal-card epson-guide-modal-card" onclick="event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title">
-            <i data-lucide="tablet" style="color: #38bdf8;"></i>
-            <h3>태블릿 엡손(Epson) 앱 인쇄 방법</h3>
+            <i data-lucide="printer" style="color: #38bdf8;"></i>
+            <h3>Epson Smart Panel 앱으로 4×6인치 인쇄하기</h3>
           </div>
           <button type="button" class="modal-close-btn" onclick="closeEpsonGuideModal()">&times;</button>
         </div>
@@ -386,40 +389,63 @@
             <div class="epson-step-item">
               <div class="step-num-badge">1</div>
               <div class="step-content">
-                <h4>[📱 엡손 앱으로 바로 인쇄] 버튼 터치</h4>
-                <p>태블릿의 공유 창이 뜨면 <strong>Epson Smart Panel</strong> 또는 <strong>Epson iPrint</strong> 앱을 선택합니다.</p>
+                <h4>사진 갤러리에 저장 (자동 저장 완료 ✅)</h4>
+                <p>인쇄용 4×6인치 고화질 사진이 태블릿 <strong>사진/갤러리</strong>에 저장됩니다. (안 되었을 시 아래 [사진 저장] 클릭)</p>
               </div>
             </div>
             <div class="epson-step-item">
               <div class="step-num-badge">2</div>
               <div class="step-content">
-                <h4>용지 크기 4×6인치 확인</h4>
-                <p>용지 크기: <strong>4×6인치 (10×15cm / KG)</strong> 선택<br>용지 종류: <strong>포토용지(광택/인화지)</strong> 선택</p>
+                <h4>Epson Smart Panel 앱 실행</h4>
+                <p>태블릿 홈 화면에서 <strong>Epson Smart Panel</strong> 앱을 실행하거나 아래 [앱 실행하기] 버튼을 터치합니다.</p>
               </div>
             </div>
             <div class="epson-step-item">
               <div class="step-num-badge">3</div>
               <div class="step-content">
-                <h4>[인쇄] 터치하여 즉시 출력!</h4>
-                <p>Wi-Fi로 연결된 엡손 프린터에서 선명한 4×6인치 인생네컷이 출력됩니다.</p>
+                <h4>[사진 인쇄] 메뉴 선택</h4>
+                <p>앱 메인 화면에서 <strong>[사진 인쇄]</strong>를 누르고, 방금 저장된 네컷 사진을 선택합니다.</p>
+              </div>
+            </div>
+            <div class="epson-step-item">
+              <div class="step-num-badge">4</div>
+              <div class="step-content">
+                <h4>4×6인치 인쇄 설정 확인 (⚙️)</h4>
+                <p>
+                  • 용지 크기: <strong>4×6인치 (또는 10×15cm / KG)</strong><br>
+                  • 용지 종류: <strong>사진용지(광택 / 글로시)</strong><br>
+                  • 테두리: <strong>테두리 없음(Borderless)</strong> 권장
+                </p>
+              </div>
+            </div>
+            <div class="epson-step-item">
+              <div class="step-num-badge">5</div>
+              <div class="step-content">
+                <h4>[인쇄] 터치하여 출력!</h4>
+                <p>연결된 엡손 프린터에서 선명한 4×6인치 인생네컷 사진이 즉시 출력됩니다.</p>
               </div>
             </div>
           </div>
 
-          <div class="epson-guide-tip-box">
-            <div class="tip-title"><i data-lucide="info"></i> 앱이 공유 창에 바로 보이지 않으신가요?</div>
-            <p>1. <strong>[💾 4×6 사진 저장]</strong> 버튼을 눌러 사진을 태블릿 갤러리에 저장합니다.<br>
-               2. 태블릿에서 <strong>Epson Smart Panel</strong> 또는 <strong>Epson iPrint</strong> 앱을 실행합니다.<br>
-               3. <strong>'사진 인쇄'</strong> 메뉴에서 저장된 사진을 선택하고 4×6인치로 인쇄하세요!</p>
+          <div class="epson-app-download-row">
+            <span class="download-label">Epson Smart Panel 앱이 없으신가요?</span>
+            <div class="store-links">
+              <a href="https://play.google.com/store/apps/details?id=com.epson.epsonsmart" target="_blank" class="store-btn">
+                <i data-lucide="smartphone"></i> 안드로이드/갤럭시 탭
+              </a>
+              <a href="https://apps.apple.com/app/epson-smart-panel/id1477796092" target="_blank" class="store-btn">
+                <i data-lucide="tablet"></i> iPad / iPhone
+              </a>
+            </div>
           </div>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer" style="gap: 8px;">
           <button type="button" class="action-btn secondary modal-action" onclick="savePhotoToDevice()">
-            <i data-lucide="download"></i> <span>사진 갤러리에 저장</span>
+            <i data-lucide="download"></i> <span>사진 갤러리 저장</span>
           </button>
-          <button type="button" class="action-btn primary modal-action" onclick="closeEpsonGuideModal()">
-            <i data-lucide="check"></i> <span>확인했습니다</span>
+          <button type="button" class="action-btn primary modal-action" onclick="launchEpsonSmartPanelApp()" style="background: linear-gradient(135deg, #0284c7, #003399);">
+            <i data-lucide="external-link"></i> <span>Epson Smart Panel 앱 열기</span>
           </button>
         </div>
       </div>

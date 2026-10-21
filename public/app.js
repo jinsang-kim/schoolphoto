@@ -1759,12 +1759,15 @@ async function savePrinterSettings() {
   }, 700);
 }
 
-// 📱 태블릿 / 모바일 엡손(Epson) 앱 연동 인쇄
+// 📱 태블릿 Epson Smart Panel 앱 연동 인쇄
 async function printViaEpsonApp() {
   if (!state.finalImageBase64) {
     alert("인쇄할 사진이 준비되지 않았습니다.");
     return;
   }
+
+  // 1. 우선 태블릿 갤러리에 4x6 고화질 사진 저장
+  savePhotoToDevice();
 
   const isGrid = state.layoutMode === "grid";
   const sizeName = isGrid ? "4x6인치_엽서형" : "4x6인치_스트립";
@@ -1775,31 +1778,49 @@ async function printViaEpsonApp() {
     const blob = await res.blob();
     const file = new File([blob], fileName, { type: "image/jpeg" });
 
-    // 1. 태블릿 Web Share API (iPad Safari, Android Galaxy Tab Chrome 등)
+    // 2. 태블릿 Web Share API 지원 시 (공유 창에서 Epson Smart Panel 선택)
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({
           files: [file],
-          title: "인생네컷 4×6인치 사진 인쇄",
-          text: "Epson Smart Panel 또는 Epson iPrint 앱을 선택하여 4×6인치(10×15cm)로 인쇄하세요!",
+          title: "Epson Smart Panel 4×6 인쇄",
+          text: "Epson Smart Panel 앱을 선택하여 4×6인치(10×15cm)로 인쇄하세요!",
         });
-        showToast("📱 엡손 앱을 선택하여 인쇄를 진행해 주세요!");
+        showToast("📱 Epson Smart Panel 앱을 선택해 인쇄를 완료하세요!");
         return;
       } catch (shareErr) {
         if (shareErr.name === "AbortError") {
-          return; // 사용자가 창을 닫음
+          // 사용자가 공유 창을 닫은 경우 가이드 모달 띄우기
+          openEpsonGuideModal();
+          return;
         }
         console.warn("Web Share 오류:", shareErr);
       }
     }
 
-    // 2. Web Share 미지원 브라우저 또는 PC: 파일 즉시 저장 + 엡손 앱 안내 팝업
-    savePhotoToDevice();
+    // 3. Web Share 미지원 브라우저 또는 PC: 가이드 모달 열기
     openEpsonGuideModal();
   } catch (err) {
     console.error("엡손 인쇄 처리 실패:", err);
-    savePhotoToDevice();
     openEpsonGuideModal();
+  }
+}
+
+// 🚀 Epson Smart Panel 앱 직접 실행
+function launchEpsonSmartPanelApp() {
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  showToast("🚀 Epson Smart Panel 앱을 실행합니다...");
+
+  if (isAndroid) {
+    // 안드로이드 패키지명: com.epson.epsonsmart
+    window.location.href =
+      "intent://#Intent;package=com.epson.epsonsmart;scheme=epsonsmart;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.epson.epsonsmart;end;";
+  } else if (isIOS) {
+    window.location.href = "https://apps.apple.com/app/epson-smart-panel/id1477796092";
+  } else {
+    window.open("https://www.epson.co.kr/epson-smart-panel", "_blank");
   }
 }
 
@@ -1815,10 +1836,10 @@ function savePhotoToDevice() {
   link.click();
   document.body.removeChild(link);
 
-  showToast("💾 4×6인치 사진이 기기에 저장되었습니다!\n앱손(Epson) 앱의 '사진 인쇄'에서 선택해 출력하세요.");
+  showToast("💾 4×6인치 사진이 갤러리에 저장되었습니다!\nEpson Smart Panel 앱의 [사진 인쇄]에서 출력하세요.");
 }
 
-// 📱 엡손 앱 안내 모달 제어
+// 📱 Epson Smart Panel 앱 안내 모달 제어
 function openEpsonGuideModal() {
   const modal = document.getElementById("modal-epson-guide");
   if (modal) {
