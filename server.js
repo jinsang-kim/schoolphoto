@@ -308,10 +308,11 @@ app.post("/api/complete", async (req, res) => {
       return res.status(400).json({ error: "이미지 데이터가 없습니다." });
     }
 
-    // Base64 데이터를 파일 및 메모리에 저장
+    // Base64 데이터를 파일 및 메모리에 저장 (클라이언트와 QR코드가 일치하도록 요청된 파일명 우선 적용)
     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
     const buffer = Buffer.from(base64Data, "base64");
-    const fileName = `photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
+    const safeCustomName = req.body.fileName && /^[a-zA-Z0-9_-]+\.jpg$/.test(req.body.fileName) ? req.body.fileName : null;
+    const fileName = safeCustomName || `photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
     const filePath = path.join(uploadDir, fileName);
 
     try {

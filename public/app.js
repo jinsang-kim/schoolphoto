@@ -3,7 +3,7 @@ const state = {
   currentScreen: "home",
   layoutMode: "grid", // 'grid' (태블릿 2x2) 또는 'strip' (데스크탑 4x1 2줄)
   selectedTheme: "dokdo_sunrise",
-  selectedFilter: "bright",
+  selectedFilter: "haru_cool", // 여고생 선호 1위 하루필름 쿨톤 기본
   printQuantity: 1,
   printerName: localStorage.getItem("photobooth_printer") || "EPSON L15150 Series",
   capturedImages: [],
@@ -11,6 +11,10 @@ const state = {
   isCapturing: false,
   finalImageBase64: null,
   resetTimerInterval: null,
+  currentPhotoId: null,
+  currentQrImage: null,
+  serverBaseUrl: null,
+  serverLocalIp: null,
 };
 
 // ⭐️ 고해상도 일러스트 배경 이미지 프리로드 캐시
@@ -283,18 +287,14 @@ const THEME_CONFIG = {
   },
 };
 
-// 10가지 색감 필터 설정
+// ⭐️ 여고생 선호도 1위 인생네컷 & 하루필름 & 포토이즘 대표 감성 필터 6종 엄선
 const FILTER_CONFIG = {
-  original: { name: "원본 컬러", icon: "📷", css: "none" },
-  bright: { name: "화사한 뽀샤시", icon: "✨", css: "brightness(1.15) contrast(1.04) saturate(1.12)" },
-  grayscale: { name: "흑백 모노", icon: "🖤", css: "grayscale(100%) contrast(1.15)" },
-  warm: { name: "따뜻한 웜톤", icon: "☀️", css: "sepia(22%) saturate(1.22) brightness(1.05)" },
-  cool: { name: "쿨톤 아이스", icon: "❄️", css: "hue-rotate(185deg) saturate(0.9) brightness(1.08) contrast(1.05)" },
-  retro90s: { name: "90s 레트로", icon: "🎞️", css: "contrast(1.2) brightness(0.95) sepia(35%) saturate(1.3)" },
-  pink_blush: { name: "핑크 블러셔", icon: "🌸", css: "hue-rotate(330deg) saturate(1.25) brightness(1.06)" },
-  sepia: { name: "감성 세피아", icon: "☕", css: "sepia(75%) contrast(1.1) brightness(0.98)" },
-  vivid: { name: "비비드 팝", icon: "🎨", css: "saturate(1.5) contrast(1.12) brightness(1.02)" },
-  cinematic: { name: "시네마틱", icon: "🎬", css: "contrast(1.25) saturate(1.15) brightness(0.92)" },
+  original: { name: "원본 내추럴", icon: "📷", css: "none" },
+  haru_cool: { name: "하루 쿨톤", icon: "🩵", css: "brightness(1.14) contrast(1.05) saturate(1.08) hue-rotate(355deg)" },
+  photoism_mono: { name: "포토 모노", icon: "🖤", css: "grayscale(100%) contrast(1.22) brightness(1.04)" },
+  peach_blush: { name: "피치 블러셔", icon: "🌸", css: "brightness(1.12) contrast(1.04) saturate(1.22) hue-rotate(345deg)" },
+  pure_bright: { name: "클리어 뽀샤시", icon: "✨", css: "brightness(1.18) contrast(1.02) saturate(1.1)" },
+  vintage_film: { name: "빈티지 필름", icon: "🎞️", css: "sepia(28%) contrast(1.15) brightness(1.05) saturate(1.25)" },
 };
 
 // 테마 배경 이미지 사전 로드
@@ -642,7 +642,7 @@ function resetThumbnailSlots() {
 async function runPhotoSequence(cutIndex) {
   if (cutIndex >= 4) {
     stopCamera();
-    await renderLife4CutCanvas();
+    await preparePhotoSessionAndRender();
     goToScreen("preview");
     return;
   }
@@ -672,6 +672,48 @@ async function runPhotoSequence(cutIndex) {
 
   await sleep(1800);
   runPhotoSequence(cutIndex + 1);
+}
+
+// ⭐️ 실제 인쇄물 하단에 인쇄될 다운로드 QR코드 사전 생성 및 캔버스 합성
+async function preparePhotoSessionAndRender() {
+  if (!state.currentPhotoId) {
+    state.currentPhotoId = `photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
+  }
+
+  // QR 코드 다운로드 링크 결정 (모바일 브라우저에서 스캔 시 열릴 URL)
+  let downloadUrl = "";
+  if (state.serverBaseUrl) {
+    downloadUrl = `${state.serverBaseUrl}/download.html?file=${state.currentPhotoId}`;
+  } else if ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && state.serverLocalIp) {
+    downloadUrl = `http://${state.serverLocalIp}:3000/download.html?file=${state.currentPhotoId}`;
+  } else {
+    downloadUrl = `${window.location.origin}/download.html?file=${state.currentPhotoId}`;
+  }
+
+  // 실제 스캔 가능한 고해상도 QR 이미지 생성
+  if (typeof QRCode !== "undefined" && QRCode.toDataURL) {
+    try {
+      const qrDataUrl = await QRCode.toDataURL(downloadUrl, {
+        errorCorrectionLevel: "M",
+        margin: 1,
+        width: 240,
+        color: {
+          dark: "#0f172a",
+          light: "#ffffff",
+        },
+      });
+      state.currentQrImage = await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = qrDataUrl;
+      });
+    } catch (qrErr) {
+      console.warn("QR 이미지 사전 생성 알림:", qrErr.message);
+    }
+  }
+
+  await renderLife4CutCanvas();
 }
 
 function triggerFlash() {
@@ -795,14 +837,14 @@ async function renderLife4CutCanvas() {
     })
   );
 
-  renderCompositeFrame(ctx, theme, W, H, loadedImages);
+  renderCompositeFrame(ctx, theme, W, H, loadedImages, state.currentQrImage);
   state.finalImageBase64 = canvas.toDataURL("image/jpeg", 0.92);
 }
 
 // ====================================================
 // 🎨 하이틴 여고생 감성 포토부스 통합 렌더링 엔진 (미리보기 & 최종 인쇄 공용)
 // ====================================================
-function renderCompositeFrame(ctx, theme, W, H, loadedImages) {
+function renderCompositeFrame(ctx, theme, W, H, loadedImages, qrImage = null) {
   const s = W / 1200; // 1200x1800 기준 스케일 팩터 (프리뷰는 0.5, 인쇄본은 1.0)
   const today = new Date();
   const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, "0")}.${String(today.getDate()).padStart(2, "0")}`;
@@ -837,8 +879,8 @@ function renderCompositeFrame(ctx, theme, W, H, loadedImages) {
     // 3. 여고생 다꾸 스티커 오버레이 (파스텔 마스킹 테이프, 새틴 리본, 3D 하트, 진주)
     drawHighTeenDecoOverlays(ctx, theme, 0, W, H, padX, topMargin, photoW, photoH, gapX, gapY, s, false);
 
-    // 4. 하단 통합 정보 카드 (기념일 배지, 메인 타이틀, 서브 슬로건, 학교/동아리 시그니처, 촬영일자)
-    drawBottomOrganizedInfo(ctx, theme, 0, W, H, dateStr, s, false);
+    // 4. 하단 통합 정보 및 실제 인쇄용 미니 QR 코드
+    drawBottomOrganizedInfo(ctx, theme, 0, W, H, dateStr, s, false, qrImage);
 
   } else {
     // ⭐️ 4x1 스트립 모드 (좌/우 2줄 분할 인쇄)
@@ -872,7 +914,7 @@ function renderCompositeFrame(ctx, theme, W, H, loadedImages) {
       }
 
       drawHighTeenDecoOverlays(ctx, theme, colX, colWidth, H, padX, topMargin, photoW, photoH, 0, gapY, s, true);
-      drawBottomOrganizedInfo(ctx, theme, colX, colWidth, H, dateStr, s, true);
+      drawBottomOrganizedInfo(ctx, theme, colX, colWidth, H, dateStr, s, true, qrImage);
 
       ctx.restore();
     });
@@ -1227,7 +1269,7 @@ function drawHighTeenDecoOverlays(ctx, theme, colX, W, H, padX, topMargin, photo
 }
 
 // 5. 하단 감성 브랜딩 (투박한 사각 박스를 완전히 제거하고, 일러스트와 자연스럽게 어우러지는 하루필름/포토이즘 감성 디자인)
-function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip) {
+function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qrImage = null) {
   ctx.save();
   const cx = colX + W / 2;
   const st = isStrip ? s * 0.72 : s;
@@ -1371,8 +1413,76 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip) {
   ctx.fillText(footerText, cx, footerY);
   ctx.restore();
 
-  // 8. 하단 좌/우 몽환적인 진주 & 3D 하트 데코
-  if (!isStrip) {
+  // 8. ⭐️ [실제 인쇄 사진용 모바일 다운로드 미니 QR 코드 스티커]
+  if (qrImage) {
+    if (!isStrip) {
+      // 엽서형 우측 하단 QR 스퀘어 뱃지
+      const qrW = 96 * s;
+      const qrH = 110 * s;
+      const qrX = W - 54 * s - qrW;
+      const qrY = 1640 * s;
+
+      ctx.save();
+      ctx.shadowColor = "rgba(15, 23, 42, 0.22)";
+      ctx.shadowBlur = 10 * s;
+      ctx.shadowOffsetY = 4 * s;
+
+      ctx.fillStyle = "#ffffff";
+      drawRoundRect(ctx, qrX, qrY, qrW, qrH, 8 * s);
+      ctx.fill();
+
+      ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
+      ctx.lineWidth = 1.6 * s;
+      drawRoundRect(ctx, qrX, qrY, qrW, qrH, 8 * s);
+      ctx.stroke();
+
+      ctx.shadowColor = "transparent";
+      ctx.drawImage(qrImage, qrX + 7 * s, qrY + 6 * s, 82 * s, 82 * s);
+
+      ctx.font = `800 ${8.5 * s}px 'Pretendard', sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = isNight ? "#1e1b4b" : (theme.accentColor || "#be185d");
+      ctx.fillText("SCAN ME 📷", qrX + qrW / 2, qrY + 99 * s);
+      ctx.restore();
+
+      // 좌측 균형용 진주 & 하트 데코
+      drawPearlCluster(ctx, colX + 80 * s, 1685 * s, 7 * s);
+      drawGlossy3DHeart(ctx, colX + 95 * s, 1685 * s, 16 * s, "#f472b6");
+    } else {
+      // 스트립 2줄 모드: 각 줄마다 우측 하단에 미니 QR 스티커 탑재!
+      const padX = 40 * s;
+      const qrW = 66 * s;
+      const qrH = 76 * s;
+      const qrX = colX + (W / 2) - padX - qrW;
+      const qrY = 1670 * s;
+
+      ctx.save();
+      ctx.shadowColor = "rgba(15, 23, 42, 0.2)";
+      ctx.shadowBlur = 6 * s;
+      ctx.shadowOffsetY = 2 * s;
+
+      ctx.fillStyle = "#ffffff";
+      drawRoundRect(ctx, qrX, qrY, qrW, qrH, 6 * s);
+      ctx.fill();
+
+      ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
+      ctx.lineWidth = 1.2 * s;
+      drawRoundRect(ctx, qrX, qrY, qrW, qrH, 6 * s);
+      ctx.stroke();
+
+      ctx.shadowColor = "transparent";
+      ctx.drawImage(qrImage, qrX + 5 * s, qrY + 5 * s, 56 * s, 56 * s);
+
+      ctx.font = `800 ${6.5 * s}px 'Pretendard', sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = isNight ? "#1e1b4b" : (theme.accentColor || "#be185d");
+      ctx.fillText("SCAN 📷", qrX + qrW / 2, qrY + 68 * s);
+      ctx.restore();
+    }
+  } else if (!isStrip) {
+    // QR 이미지가 없는 프리뷰 화면 시 기본 장식
     drawPearlCluster(ctx, cx - sepW / 2 - 20 * s, sepY, 6 * s);
     drawPearlCluster(ctx, cx + sepW / 2 + 20 * s, sepY, 6 * s);
     drawGlossy3DHeart(ctx, colX + 80 * s, 1720 * s, 16 * s, "#f472b6");
@@ -1729,6 +1839,7 @@ async function submitFinal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           imageBase64: state.finalImageBase64,
+          fileName: state.currentPhotoId,
           printCount: state.printQuantity,
           frameTheme: state.selectedTheme,
           layoutMode: state.layoutMode,
@@ -1842,6 +1953,8 @@ async function initPrinterConfig() {
       if (data.printerName && !localStorage.getItem("photobooth_printer")) {
         state.printerName = data.printerName;
       }
+      if (data.baseUrl) state.serverBaseUrl = data.baseUrl;
+      if (data.localIp) state.serverLocalIp = data.localIp;
     }
   } catch (e) {
     console.log("Config fetch note:", e.message);
