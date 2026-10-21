@@ -811,16 +811,13 @@ function renderCompositeFrame(ctx, theme, W, H, loadedImages) {
     // 1. 전체 배경 일러스트 렌더링
     drawBackgroundIllustration(ctx, theme, 0, 0, W, H);
 
-    // 2. 상단 포스터 헤더 타이틀 & 슬로건 (0 ~ 150*s)
-    drawTopAestheticHeader(ctx, theme, 0, W, s, false);
-
-    // 3. 2x2 폴라로이드 포토 슬롯 배치 (하단 여백을 정확히 2cm = 236px*s 만 남기고 사진 프레임으로 채움)
+    // 2. 상단 여백 제거 (사진이 상단 topMargin = 48*s 부터 시원하게 바로 시작)
     const padX = 54 * s;
-    const topMargin = 156 * s;
+    const topMargin = 48 * s;
     const gapX = 24 * s;
     const gapY = 24 * s;
     const photoW = (W - padX * 2 - gapX) / 2; // 534 * s
-    const photoH = 692 * s; // 156 + 692*2 + 24 = 1564*s (하단 여백 1800 - 1564 = 236px = 정확히 2.0cm)
+    const photoH = 692 * s; // 48 + 692*2 + 24 = 1456*s (하단 카드에 충분한 공간 제공)
 
     const positions = [
       { x: padX, y: topMargin },
@@ -837,11 +834,11 @@ function renderCompositeFrame(ctx, theme, W, H, loadedImages) {
       }
     });
 
-    // 4. 여고생 다꾸 스티커 오버레이 (파스텔 마스킹 테이프, 새틴 리본, 3D 하트, 진주, 반짝이, 표지석/푯말)
+    // 3. 여고생 다꾸 스티커 오버레이 (파스텔 마스킹 테이프, 새틴 리본, 3D 하트, 진주)
     drawHighTeenDecoOverlays(ctx, theme, 0, W, H, padX, topMargin, photoW, photoH, gapX, gapY, s, false);
 
-    // 5. 하단 합천여자고등학교 동아리 시그니처 카드 (2cm 여백 내 중앙 배치)
-    drawBottomClubSignature(ctx, theme, 0, W, H, dateStr, s, false);
+    // 4. 하단 통합 정보 카드 (기념일 배지, 메인 타이틀, 서브 슬로건, 학교/동아리 시그니처, 촬영일자)
+    drawBottomOrganizedInfo(ctx, theme, 0, W, H, dateStr, s, false);
 
   } else {
     // ⭐️ 4x1 스트립 모드 (좌/우 2줄 분할 인쇄)
@@ -857,13 +854,11 @@ function renderCompositeFrame(ctx, theme, W, H, loadedImages) {
       // 각 스트립마다 일러스트 배경 렌더링
       drawBackgroundIllustration(ctx, theme, colX, 0, colWidth, H);
 
-      // 상단 스트립 헤더
-      drawTopAestheticHeader(ctx, theme, colX, colWidth, s, true);
-
+      // 상단 여백 제거 (사진이 topMargin = 48*s 부터 바로 시작)
       const padX = 40 * s;
-      const topMargin = 156 * s;
+      const topMargin = 48 * s;
       const photoW = colWidth - padX * 2; // 520 * s
-      const photoH = 340 * s; // 156 + 340*4 + 16*3 = 1564*s (하단 여백 1800 - 1564 = 236px = 정확히 2.0cm)
+      const photoH = 340 * s; // 48 + 340*4 + 16*3 = 1456*s
       const gapY = 16 * s;
 
       for (let idx = 0; idx < 4; idx++) {
@@ -877,7 +872,7 @@ function renderCompositeFrame(ctx, theme, W, H, loadedImages) {
       }
 
       drawHighTeenDecoOverlays(ctx, theme, colX, colWidth, H, padX, topMargin, photoW, photoH, 0, gapY, s, true);
-      drawBottomClubSignature(ctx, theme, colX, colWidth, H, dateStr, s, true);
+      drawBottomOrganizedInfo(ctx, theme, colX, colWidth, H, dateStr, s, true);
 
       ctx.restore();
     });
@@ -1197,7 +1192,7 @@ function drawCuteGirlAvatar(ctx, cx, cy, r, idx) {
   ctx.restore();
 }
 
-// 5. 여고생 다꾸(다이어리 꾸미기) 오버레이 아트워크 (마스킹테이프, 리본, 3D 하트, 진주, 포스터 표지석/푯말)
+// 4. 여고생 다꾸(다이어리 꾸미기) 오버레이 아트워크 (마스킹테이프, 리본, 3D 하트, 진주)
 function drawHighTeenDecoOverlays(ctx, theme, colX, W, H, padX, topMargin, photoW, photoH, gapX, gapY, s, isStrip) {
   ctx.save();
   const cx = colX + W / 2;
@@ -1217,20 +1212,9 @@ function drawHighTeenDecoOverlays(ctx, theme, colX, W, H, padX, topMargin, photo
     drawPearlCluster(ctx, colX + W - padX + 4 * s, topMargin + 38 * s, 7 * s);
     drawPearlCluster(ctx, colX + padX - 4 * s, topMargin + photoH * 2 + gapY - 24 * s, 7 * s);
 
-    // (4) 하단 사진 프레임 좌/우 감성 다꾸 스티커 배치 (폴라로이드 하단 테두리에 스크랩북 스타일로 장식)
-    const badgeY = topMargin + photoH * 2 + gapY - 10 * s;
-
-    if (theme.category === "dokdo") {
-      // 좌측: 1번 포스터 속 '독도, 지금도 그리고 영원히, 우리의 땅' 감성 표지석 스티커
-      drawDokdoPlaqueSticker(ctx, colX + padX + 115 * s, badgeY, s);
-      // 우측: 1번 포스터 속 '“독도는 오늘도 아름답습니다.”' 감성 말풍선 라벨
-      drawAestheticQuoteTag(ctx, colX + W - padX - 135 * s, badgeY, theme.sideQuoteRight, "#ffffff", "#be123c", "#f472b6", s);
-    } else {
-      // 좌측: 2번 포스터 속 나무 푯말 ('다른 우리가 만드는 더 아름다운 세상 ♥')
-      drawCuteSignpostSticker(ctx, colX + padX + 120 * s, badgeY, ["다른 우리가 만드는", "더 아름다운 세상 ♥"], s, -0.04);
-      // 우측: 2번 포스터 속 나무 푯말 ('존중 • 이해 • 공감 • 함께 ♥')
-      drawCuteSignpostSticker(ctx, colX + W - padX - 120 * s, badgeY, ["존중 • 이해 • 공감", "함께 더 나은 우리 ♥"], s, 0.04);
-    }
+    // (4) 하단 정보 카드 상단 좌/우 귀여운 리본 & 하트 포인트
+    drawSatinRibbonBow(ctx, colX + padX + 36 * s, 1472 * s, 22 * s, theme.ribbonColor || "#f472b6");
+    drawGlossy3DHeart(ctx, colX + W - padX - 36 * s, 1472 * s, 18 * s, "#f472b6");
   } else {
     // 스트립 모드용 아기자기한 리본 & 마스킹테이프
     const st = s * 0.72;
@@ -1242,62 +1226,136 @@ function drawHighTeenDecoOverlays(ctx, theme, colX, W, H, padX, topMargin, photo
   ctx.restore();
 }
 
-// 6. 하단 합천여자고등학교 동아리 시그니처 카드 (유네스코 동아리 / 또래상담 동아리)
-function drawBottomClubSignature(ctx, theme, colX, W, H, dateStr, s, isStrip) {
+// 5. 하단 통합 정보 카드 (기념일 배지, 메인 타이틀, 서브 슬로건, 학교·동아리 시그니처, 촬영일자)
+function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip) {
   ctx.save();
   const cx = colX + W / 2;
-  const st = isStrip ? s * 0.65 : s;
+  const st = isStrip ? s * 0.72 : s;
 
-  // 2cm (236px * s) 여백 내 정중앙 배치
-  const cardW = isStrip ? W - 44 * s : 760 * s;
-  const cardH = isStrip ? 84 * s : 96 * s;
-  const bottomLimit = H - 236 * s; // 1564 * s
-  const cardY = bottomLimit + (236 * s - cardH) / 2; // ~1634 * s
+  // 하단 카드 영역 설정 (사진이 1456*s에서 끝나므로 1472*s부터 296*s 크기로 배치)
+  const padX = isStrip ? 36 * s : 54 * s;
+  const cardX = colX + padX;
+  const cardW = W - padX * 2;
+  const cardY = 1472 * s;
+  const cardH = 296 * s;
+  const cardRadius = isStrip ? 18 * s : 22 * s;
 
-  // 반투명 글래스모피즘 카드
-  ctx.shadowColor = "rgba(15, 23, 42, 0.28)";
-  ctx.shadowBlur = 16 * st;
-  ctx.shadowOffsetY = 4 * st;
+  // 1. 반투명 글래스모피즘 베이스 카드
+  ctx.shadowColor = "rgba(15, 23, 42, 0.24)";
+  ctx.shadowBlur = 18 * s;
+  ctx.shadowOffsetY = 6 * s;
 
   ctx.fillStyle = theme.id === "dokdo_unesco"
-    ? "rgba(15, 23, 42, 0.82)"
-    : "rgba(255, 255, 255, 0.86)";
-  drawRoundRect(ctx, cx - cardW / 2, cardY, cardW, cardH, 20 * st);
+    ? "rgba(15, 23, 42, 0.90)"
+    : "rgba(255, 255, 255, 0.93)";
+  drawRoundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
   ctx.fill();
 
   ctx.shadowColor = "transparent";
   ctx.strokeStyle = theme.border || "#f9a8d4";
-  ctx.lineWidth = 2.2 * st;
-  drawRoundRect(ctx, cx - cardW / 2, cardY, cardW, cardH, 20 * st);
+  ctx.lineWidth = 2.4 * s;
+  drawRoundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
   ctx.stroke();
 
-  // 카드 양옆 월계수/꽃 장식 포인트
-  const mainTitleColor = theme.id === "dokdo_unesco" ? "#ffffff" : "#0f172a";
-  const subClubColor = theme.id === "dokdo_unesco" ? "#fef08a" : theme.accentColor;
-  const mottoColor = theme.id === "dokdo_unesco" ? "#cbd5e1" : "#475569";
+  // 상단 은은한 하이라이트 글래스 광채
+  ctx.save();
+  ctx.beginPath();
+  drawRoundRect(ctx, cardX + 1, cardY + 1, cardW - 2, cardH - 2, cardRadius);
+  ctx.clip();
+  const innerGlow = ctx.createLinearGradient(cx, cardY, cx, cardY + 60 * s);
+  innerGlow.addColorStop(0, "rgba(255, 255, 255, 0.55)");
+  innerGlow.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = innerGlow;
+  ctx.fillRect(cardX, cardY, cardW, 60 * s);
+  ctx.restore();
 
-  // 학교명 + 동아리명
-  ctx.font = `800 ${24 * st}px 'Gowun Batang', 'Pretendard', serif`;
-  ctx.fillStyle = mainTitleColor;
+  // 색상 팔레트
+  const isNight = theme.id === "dokdo_unesco";
+  const titleCol = isNight ? "#fef08a" : (theme.textColor || "#0f172a");
+  const subCol = isNight ? "#f5d0fe" : (theme.subTextColor || "#be185d");
+  const schoolCol = isNight ? "#ffffff" : "#0f172a";
+  const clubSubCol = isNight ? "#fef08a" : (theme.accentColor || "#e11d48");
+  const mottoCol = isNight ? "#cbd5e1" : "#475569";
+  const dividerCol = isNight ? "rgba(255, 255, 255, 0.18)" : "rgba(226, 232, 240, 0.95)";
+
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const clubHeader = `${theme.clubName}  •  ${theme.clubSub}`;
-  ctx.fillText(clubHeader, cx, cardY + 31 * st);
 
-  // 양옆 동아리 아이콘 (유네스코 신전 엠블럼 / 또래상담 하트 새싹)
+  // 2. [Row 1] 상단 기념일/테마 캡슐 필 배지
+  const badgeText = theme.category === "dokdo" ? "🇰🇷 10.25 독도의 날" : "🌍 5.21 세계 문화 다양성의 날";
+  ctx.font = `800 ${14 * st}px 'Pretendard', sans-serif`;
+  const bw = ctx.measureText(badgeText).width + (isStrip ? 24 * st : 30 * st);
+  const bh = (isStrip ? 23 : 26) * st;
+  const by = cardY + (isStrip ? 16 : 20) * s;
+
+  ctx.fillStyle = isNight ? "rgba(30, 27, 75, 0.9)" : "rgba(255, 255, 255, 0.95)";
+  drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
+  ctx.fill();
+  ctx.strokeStyle = theme.border || "#f472b6";
+  ctx.lineWidth = 1.6 * st;
+  drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
+  ctx.stroke();
+
+  ctx.fillStyle = isNight ? "#fef08a" : (theme.accentColor || "#e11d48");
+  ctx.fillText(badgeText, cx, by + bh / 2 + 0.5 * st);
+
+  // 3. [Row 2] 메인 타이틀 (선명하고 돋보이는 서체)
+  const titleY = cardY + (isStrip ? 66 : 76) * s;
+  const titleFontSize = Math.round((isStrip ? 22 : 32) * s);
+  ctx.font = `800 ${titleFontSize}px 'Gowun Batang', 'Jua', serif`;
+  ctx.fillStyle = titleCol;
+  ctx.fillText(theme.titleText, cx, titleY);
+
+  // 타이틀 양옆 반짝이 포인트
+  const titleHalfW = ctx.measureText(theme.titleText).width / 2;
+  const starDist = titleHalfW + (isStrip ? 16 : 22) * st;
+  drawTwinkleStar(ctx, cx - starDist, titleY - 2 * st, (isStrip ? 8 : 11) * st, "#facc15");
+  drawTwinkleStar(ctx, cx + starDist, titleY - 2 * st, (isStrip ? 8 : 11) * st, "#f472b6");
+
+  // 4. [Row 3] 서브 슬로건 메시지
+  const subY = cardY + (isStrip ? 104 : 118) * s;
+  ctx.font = `700 ${(isStrip ? 12.5 : 15.5) * st}px 'Pretendard', sans-serif`;
+  ctx.fillStyle = subCol;
+  ctx.fillText(theme.subText, cx, subY);
+
+  // 5. [Row 4] 섬세한 파스텔 구분선 & 미니 하트
+  const sepY = cardY + (isStrip ? 138 : 156) * s;
+  const sepW = isStrip ? 240 * s : 440 * s;
+  ctx.strokeStyle = dividerCol;
+  ctx.lineWidth = 1.2 * s;
+  ctx.beginPath();
+  ctx.moveTo(cx - sepW / 2, sepY);
+  ctx.lineTo(cx + sepW / 2, sepY);
+  ctx.stroke();
+
+  // 구분선 중앙 미니 하트 장식
+  drawGlossy3DHeart(ctx, cx, sepY, (isStrip ? 9 : 12) * st, theme.accentColor || "#ec4899");
+
+  // 6. [Row 5] 학교명 • 동아리 시그니처
+  const clubY = cardY + (isStrip ? 180 : 202) * s;
+  const clubFontSize = Math.round((isStrip ? 17 : 24) * s);
+  ctx.font = `800 ${clubFontSize}px 'Gowun Batang', 'Pretendard', serif`;
+  ctx.fillStyle = schoolCol;
+
+  const clubHeader = `${theme.clubName}  •  ${theme.clubSub}`;
+  ctx.fillText(clubHeader, cx, clubY);
+
   const headerHalfW = ctx.measureText(clubHeader).width / 2;
+  const iconDist = headerHalfW + (isStrip ? 18 : 24) * st;
   if (theme.category === "dokdo") {
-    drawMiniUnescoIcon(ctx, cx - headerHalfW - 24 * st, cardY + 30 * st, 14 * st, subClubColor);
-    drawMiniMugunghwaPin(ctx, cx + headerHalfW + 24 * st, cardY + 30 * st, 13 * st);
+    drawMiniUnescoIcon(ctx, cx - iconDist, clubY - 1 * st, (isStrip ? 11 : 14) * st, clubSubCol);
+    drawMiniMugunghwaPin(ctx, cx + iconDist, clubY - 1 * st, (isStrip ? 10 : 13) * st);
   } else {
-    drawGlossy3DHeart(ctx, cx - headerHalfW - 22 * st, cardY + 30 * st, 13 * st, "#ec4899");
-    drawGlossy3DHeart(ctx, cx + headerHalfW + 22 * st, cardY + 30 * st, 13 * st, "#ec4899");
+    drawGlossy3DHeart(ctx, cx - iconDist, clubY - 1 * st, (isStrip ? 10 : 13) * st, "#ec4899");
+    drawGlossy3DHeart(ctx, cx + iconDist, clubY - 1 * st, (isStrip ? 10 : 13) * st, "#ec4899");
   }
 
-  // 하단 슬로건 & 촬영일자
-  ctx.font = `700 ${14.5 * st}px 'Pretendard', sans-serif`;
-  ctx.fillStyle = mottoColor;
-  ctx.fillText(`${theme.clubMotto}  |  ${dateStr}`, cx, cardY + 66 * st);
+  // 7. [Row 6] 동아리 모토 및 촬영일자
+  const footerY = cardY + (isStrip ? 220 : 248) * s;
+  ctx.font = `600 ${(isStrip ? 11.5 : 14) * st}px 'Pretendard', sans-serif`;
+  ctx.fillStyle = mottoCol;
+  const footerText = `${theme.clubMotto}   |   ${dateStr}`;
+  ctx.fillText(footerText, cx, footerY);
 
   ctx.restore();
 }
