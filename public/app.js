@@ -594,6 +594,8 @@ window.addEventListener("orientationchange", () => {
 async function startCameraAndCountdown() {
   goToScreen("camera");
   state.capturedImages = [];
+  state.currentPhotoId = null;
+  state.currentQrImage = null;
   resetThumbnailSlots();
   updateViewfinderSize();
 
@@ -674,8 +676,12 @@ async function runPhotoSequence(cutIndex) {
   runPhotoSequence(cutIndex + 1);
 }
 
-// ⭐️ 실제 인쇄물 하단에 인쇄될 다운로드 QR코드 사전 생성 및 캔버스 합성
-async function preparePhotoSessionAndRender() {
+// ⭐️ 실제 인쇄물 하단에 인쇄될 다운로드 QR코드 생성 및 이미지 로딩 보장
+async function ensureQrImageReady() {
+  if (state.currentQrImage && state.currentQrImage.complete && state.currentQrImage.naturalWidth > 0) {
+    return state.currentQrImage;
+  }
+
   if (!state.currentPhotoId) {
     state.currentPhotoId = `photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
   }
@@ -690,29 +696,58 @@ async function preparePhotoSessionAndRender() {
     downloadUrl = `${window.location.origin}/download.html?file=${state.currentPhotoId}`;
   }
 
-  // 실제 스캔 가능한 고해상도 QR 이미지 생성
+  let qrDataUrl = null;
+
+  // 1. 클라이언트 로컬 QRCode 라이브러리로 생성 시도
   if (typeof QRCode !== "undefined" && QRCode.toDataURL) {
     try {
-      const qrDataUrl = await QRCode.toDataURL(downloadUrl, {
+      qrDataUrl = await QRCode.toDataURL(downloadUrl, {
         errorCorrectionLevel: "M",
         margin: 1,
-        width: 240,
+        width: 280,
         color: {
           dark: "#0f172a",
           light: "#ffffff",
         },
       });
+    } catch (qrErr) {
+      console.warn("로컬 QRCode.toDataURL 생성 알림:", qrErr.message);
+    }
+  }
+
+  // 2. 클라이언트 생성 실패 시 서버 백업 엔드포인트(/api/qrcode) 호출
+  if (!qrDataUrl) {
+    try {
+      const res = await fetch(`/api/qrcode?text=${encodeURIComponent(downloadUrl)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.dataUrl) qrDataUrl = data.dataUrl;
+      }
+    } catch (netErr) {
+      console.warn("서버 /api/qrcode 백업 호출 알림:", netErr.message);
+    }
+  }
+
+  // 3. QR 이미지를 Image 객체로 로드하여 보장
+  if (qrDataUrl) {
+    try {
       state.currentQrImage = await new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.onerror = () => resolve(null);
         img.src = qrDataUrl;
       });
-    } catch (qrErr) {
-      console.warn("QR 이미지 사전 생성 알림:", qrErr.message);
+    } catch (e) {
+      console.warn("QR 이미지 로드 실패:", e);
     }
   }
 
+  return state.currentQrImage;
+}
+
+// ⭐️ 실제 인쇄물 하단에 인쇄될 다운로드 QR코드 사전 생성 및 캔버스 합성
+async function preparePhotoSessionAndRender() {
+  await ensureQrImageReady();
   await renderLife4CutCanvas();
 }
 
@@ -826,6 +861,9 @@ async function renderLife4CutCanvas() {
 
   const theme = THEME_CONFIG[state.selectedTheme] || THEME_CONFIG.dokdo_sunrise;
   await ensureThemeImageLoaded(theme.id);
+
+  // ⭐️ QR 코드가 누락되지 않도록 확실하게 준비 보장
+  await ensureQrImageReady();
 
   const loadedImages = await Promise.all(
     state.capturedImages.map((src) => {
@@ -1414,80 +1452,110 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
   ctx.restore();
 
   // 8. ⭐️ [실제 인쇄 사진용 모바일 다운로드 미니 QR 코드 스티커]
-  if (qrImage) {
-    if (!isStrip) {
-      // 엽서형 우측 하단 QR 스퀘어 뱃지
-      const qrW = 96 * s;
-      const qrH = 110 * s;
-      const qrX = W - 54 * s - qrW;
-      const qrY = 1640 * s;
+  const activeQr = qrImage || state.currentQrImage;
+  if (!isStrip) {
+    // 엽서형 우측 하단 QR 스퀘어 뱃지
+    const qrW = 96 * s;
+    const qrH = 110 * s;
+    const qrX = W - 54 * s - qrW;
+    const qrY = 1640 * s;
 
-      ctx.save();
-      ctx.shadowColor = "rgba(15, 23, 42, 0.22)";
-      ctx.shadowBlur = 10 * s;
-      ctx.shadowOffsetY = 4 * s;
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.22)";
+    ctx.shadowBlur = 10 * s;
+    ctx.shadowOffsetY = 4 * s;
 
-      ctx.fillStyle = "#ffffff";
-      drawRoundRect(ctx, qrX, qrY, qrW, qrH, 8 * s);
-      ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    drawRoundRect(ctx, qrX, qrY, qrW, qrH, 8 * s);
+    ctx.fill();
 
-      ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
-      ctx.lineWidth = 1.6 * s;
-      drawRoundRect(ctx, qrX, qrY, qrW, qrH, 8 * s);
-      ctx.stroke();
+    ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
+    ctx.lineWidth = 1.6 * s;
+    drawRoundRect(ctx, qrX, qrY, qrW, qrH, 8 * s);
+    ctx.stroke();
 
-      ctx.shadowColor = "transparent";
-      ctx.drawImage(qrImage, qrX + 7 * s, qrY + 6 * s, 82 * s, 82 * s);
-
-      ctx.font = `800 ${8.5 * s}px 'Pretendard', sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = isNight ? "#1e1b4b" : (theme.accentColor || "#be185d");
-      ctx.fillText("SCAN ME 📷", qrX + qrW / 2, qrY + 99 * s);
-      ctx.restore();
-
-      // 좌측 균형용 진주 & 하트 데코
-      drawPearlCluster(ctx, colX + 80 * s, 1685 * s, 7 * s);
-      drawGlossy3DHeart(ctx, colX + 95 * s, 1685 * s, 16 * s, "#f472b6");
+    ctx.shadowColor = "transparent";
+    if (activeQr && activeQr.complete && activeQr.naturalWidth > 0) {
+      ctx.drawImage(activeQr, qrX + 7 * s, qrY + 6 * s, 82 * s, 82 * s);
     } else {
-      // 스트립 2줄 모드: 각 줄마다 우측 하단에 미니 QR 스티커 탑재!
-      const padX = 40 * s;
-      const qrW = 66 * s;
-      const qrH = 76 * s;
-      const qrX = colX + (W / 2) - padX - qrW;
-      const qrY = 1670 * s;
-
-      ctx.save();
-      ctx.shadowColor = "rgba(15, 23, 42, 0.2)";
-      ctx.shadowBlur = 6 * s;
-      ctx.shadowOffsetY = 2 * s;
-
-      ctx.fillStyle = "#ffffff";
-      drawRoundRect(ctx, qrX, qrY, qrW, qrH, 6 * s);
-      ctx.fill();
-
-      ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
-      ctx.lineWidth = 1.2 * s;
-      drawRoundRect(ctx, qrX, qrY, qrW, qrH, 6 * s);
-      ctx.stroke();
-
-      ctx.shadowColor = "transparent";
-      ctx.drawImage(qrImage, qrX + 5 * s, qrY + 5 * s, 56 * s, 56 * s);
-
-      ctx.font = `800 ${6.5 * s}px 'Pretendard', sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = isNight ? "#1e1b4b" : (theme.accentColor || "#be185d");
-      ctx.fillText("SCAN 📷", qrX + qrW / 2, qrY + 68 * s);
-      ctx.restore();
+      drawMockupQrPattern(ctx, qrX + 7 * s, qrY + 6 * s, 82 * s, isNight ? "#1e1b4b" : "#0f172a");
     }
-  } else if (!isStrip) {
-    // QR 이미지가 없는 프리뷰 화면 시 기본 장식
-    drawPearlCluster(ctx, cx - sepW / 2 - 20 * s, sepY, 6 * s);
-    drawPearlCluster(ctx, cx + sepW / 2 + 20 * s, sepY, 6 * s);
-    drawGlossy3DHeart(ctx, colX + 80 * s, 1720 * s, 16 * s, "#f472b6");
-    drawGlossy3DHeart(ctx, colX + W - 80 * s, 1720 * s, 16 * s, "#fb7185");
+
+    ctx.font = `800 ${8.5 * s}px 'Pretendard', sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = isNight ? "#1e1b4b" : (theme.accentColor || "#be185d");
+    ctx.fillText("SCAN ME 📷", qrX + qrW / 2, qrY + 99 * s);
+    ctx.restore();
+
+    // 좌측 균형용 진주 & 하트 데코
+    drawPearlCluster(ctx, colX + 80 * s, 1685 * s, 7 * s);
+    drawGlossy3DHeart(ctx, colX + 95 * s, 1685 * s, 16 * s, "#f472b6");
+  } else {
+    // 스트립 2줄 모드: 각 줄마다 우측 하단에 미니 QR 스티커 탑재!
+    const padX = 40 * s;
+    const qrW = 66 * s;
+    const qrH = 76 * s;
+    const qrX = colX + W - padX - qrW;
+    const qrY = 1670 * s;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.2)";
+    ctx.shadowBlur = 6 * s;
+    ctx.shadowOffsetY = 2 * s;
+
+    ctx.fillStyle = "#ffffff";
+    drawRoundRect(ctx, qrX, qrY, qrW, qrH, 6 * s);
+    ctx.fill();
+
+    ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
+    ctx.lineWidth = 1.2 * s;
+    drawRoundRect(ctx, qrX, qrY, qrW, qrH, 6 * s);
+    ctx.stroke();
+
+    ctx.shadowColor = "transparent";
+    if (activeQr && activeQr.complete && activeQr.naturalWidth > 0) {
+      ctx.drawImage(activeQr, qrX + 5 * s, qrY + 5 * s, 56 * s, 56 * s);
+    } else {
+      drawMockupQrPattern(ctx, qrX + 5 * s, qrY + 5 * s, 56 * s, isNight ? "#1e1b4b" : "#0f172a");
+    }
+
+    ctx.font = `800 ${6.5 * s}px 'Pretendard', sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = isNight ? "#1e1b4b" : (theme.accentColor || "#be185d");
+    ctx.fillText("SCAN 📷", qrX + qrW / 2, qrY + 68 * s);
+    ctx.restore();
   }
+
+  ctx.restore();
+}
+
+// ⭐️ 프리뷰 및 샘플용 미니 QR코드 패턴
+function drawMockupQrPattern(ctx, x, y, size, color = "#0f172a") {
+  ctx.save();
+  ctx.fillStyle = color;
+  const cellSize = size / 7;
+
+  // 3개 모서리 파인더 패턴 (Top-Left, Top-Right, Bottom-Left)
+  const drawFinder = (fx, fy) => {
+    ctx.fillRect(fx, fy, cellSize * 2.2, cellSize * 2.2);
+    ctx.clearRect(fx + cellSize * 0.45, fy + cellSize * 0.45, cellSize * 1.3, cellSize * 1.3);
+    ctx.fillRect(fx + cellSize * 0.7, fy + cellSize * 0.7, cellSize * 0.8, cellSize * 0.8);
+  };
+
+  drawFinder(x + cellSize * 0.2, y + cellSize * 0.2);
+  drawFinder(x + size - cellSize * 2.4, y + cellSize * 0.2);
+  drawFinder(x + cellSize * 0.2, y + size - cellSize * 2.4);
+
+  // 내부 모의 데이터 도트
+  const dots = [
+    [3, 0], [4, 1], [3, 2], [2, 3], [3, 3], [4, 3], [5, 3],
+    [1, 4], [3, 4], [5, 4], [2, 5], [4, 5], [3, 6], [5, 6]
+  ];
+  dots.forEach(([col, row]) => {
+    ctx.fillRect(x + col * cellSize, y + row * cellSize, cellSize * 0.75, cellSize * 0.75);
+  });
 
   ctx.restore();
 }
@@ -1811,6 +1879,10 @@ function drawRoundRect(ctx, x, y, w, h, r) {
 
 // 재촬영
 function retakePhotos() {
+  state.capturedImages = [];
+  state.currentPhotoId = null;
+  state.currentQrImage = null;
+  state.finalImageBase64 = null;
   goToScreen("theme");
 }
 
@@ -1859,16 +1931,27 @@ async function submitFinal() {
     }
 
     // 서버 미연결 또는 정적 웹앱(GitHub Pages 등) 환경일 경우 클라이언트 자체 QR 생성
-    if (!qrUrl && typeof QRCode !== "undefined" && QRCode.toDataURL) {
-      try {
-        const fallbackTarget = window.location.href;
-        qrUrl = await QRCode.toDataURL(fallbackTarget, {
-          errorCorrectionLevel: "M",
-          margin: 1,
-          width: 320,
-        });
-      } catch (qrErr) {
-        console.error("클라이언트 QR 생성 실패:", qrErr);
+    if (!qrUrl) {
+      if (state.currentQrImage && state.currentQrImage.src) {
+        qrUrl = state.currentQrImage.src;
+      } else if (typeof QRCode !== "undefined" && QRCode.toDataURL) {
+        try {
+          let fallbackTarget = "";
+          if (state.serverBaseUrl) {
+            fallbackTarget = `${state.serverBaseUrl}/download.html?file=${state.currentPhotoId}`;
+          } else if ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && state.serverLocalIp) {
+            fallbackTarget = `http://${state.serverLocalIp}:3000/download.html?file=${state.currentPhotoId}`;
+          } else {
+            fallbackTarget = `${window.location.origin}/download.html?file=${state.currentPhotoId}`;
+          }
+          qrUrl = await QRCode.toDataURL(fallbackTarget, {
+            errorCorrectionLevel: "M",
+            margin: 1,
+            width: 320,
+          });
+        } catch (qrErr) {
+          console.error("클라이언트 QR 생성 실패:", qrErr);
+        }
       }
     }
 
@@ -1938,6 +2021,8 @@ function startAutoResetTimer(seconds = 15) {
 function resetToHome() {
   if (state.resetTimerInterval) clearInterval(state.resetTimerInterval);
   state.capturedImages = [];
+  state.currentPhotoId = null;
+  state.currentQrImage = null;
   state.finalImageBase64 = null;
   goToScreen("home");
 }

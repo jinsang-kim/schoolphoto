@@ -97,6 +97,28 @@ app.get("/api/config", (req, res) => {
   });
 });
 
+// QR 코드 실시간 생성 API (클라이언트 백업 지원)
+app.get("/api/qrcode", async (req, res) => {
+  const text = req.query.text;
+  if (!text) {
+    return res.status(400).json({ error: "text 파라미터가 필요합니다." });
+  }
+  try {
+    const dataUrl = await QRCode.toDataURL(text, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 280,
+      color: {
+        dark: "#0f172a",
+        light: "#ffffff",
+      },
+    });
+    res.json({ dataUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 프린터 이름 실시간 변경 API
 app.post("/api/config/printer", (req, res) => {
   const { printerName } = req.body;
