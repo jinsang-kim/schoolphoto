@@ -539,11 +539,63 @@ function renderLiveThemePreview() {
   renderCompositeFrame(ctx, theme, W, H, null);
 }
 
+// 📐 실제 인화 영역 뷰파인더 사각형 크기 및 비율 계산
+function updateViewfinderSize() {
+  const box = document.getElementById("viewfinder-box");
+  const wrapper = document.querySelector(".camera-wrapper");
+  const label = document.getElementById("viewfinder-label-text");
+  if (!box || !wrapper) return;
+
+  const isGrid = state.layoutMode === "grid";
+  // 인화 사진 슬롯의 실제 가로/세로 비율 (grid: 494/468 ≈ 1.055, strip: 496/236 ≈ 2.102)
+  const targetRatio = isGrid ? (494 / 468) : (496 / 236);
+
+  if (label) {
+    label.innerText = isGrid
+      ? "📸 실제 인화 영역 (4×6 엽서형 2×2)"
+      : "📸 실제 인화 영역 (4×6 스트립 2줄)";
+  }
+
+  const cw = wrapper.clientWidth || window.innerWidth;
+  const ch = wrapper.clientHeight || window.innerHeight;
+
+  // 상단 컷 인디케이터(~80px)와 하단 썸네일바(~90px)를 피하는 최대 가용 공간
+  const availW = Math.max(220, cw - 40);
+  const availH = Math.max(200, ch - 170);
+
+  let boxW, boxH;
+  if (availW / availH > targetRatio) {
+    boxH = Math.min(availH, isGrid ? 640 : 420);
+    boxW = Math.round(boxH * targetRatio);
+  } else {
+    boxW = Math.min(availW, 900);
+    boxH = Math.round(boxW / targetRatio);
+  }
+
+  box.style.width = `${boxW}px`;
+  box.style.height = `${boxH}px`;
+}
+
+// 윈도우 리사이즈 및 회전 시 뷰파인더 비율 동기화
+window.addEventListener("resize", () => {
+  if (state.currentScreen === "camera") {
+    updateViewfinderSize();
+  }
+});
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => {
+    if (state.currentScreen === "camera") {
+      updateViewfinderSize();
+    }
+  }, 200);
+});
+
 // 카메라 및 촬영 시퀀스
 async function startCameraAndCountdown() {
   goToScreen("camera");
   state.capturedImages = [];
   resetThumbnailSlots();
+  updateViewfinderSize();
 
   try {
     const video = document.getElementById("webcam");
@@ -558,7 +610,12 @@ async function startCameraAndCountdown() {
     video.srcObject = state.stream;
     video.style.filter = FILTER_CONFIG[state.selectedFilter]?.css || "none";
 
+    video.onloadedmetadata = () => {
+      updateViewfinderSize();
+    };
+
     setTimeout(() => {
+      updateViewfinderSize();
       runPhotoSequence(0);
     }, 1500);
   } catch (err) {
@@ -619,19 +676,86 @@ async function runPhotoSequence(cutIndex) {
 
 function triggerFlash() {
   const flash = document.getElementById("flash-overlay");
-  flash.classList.add("active");
+  const box = document.getElementById("viewfinder-box");
+  if (flash) flash.classList.add("active");
+  if (box) box.classList.add("flash-pulse");
+
   setTimeout(() => {
-    flash.classList.remove("active");
-  }, 150);
+    if (flash) flash.classList.remove("active");
+    if (box) box.classList.remove("flash-pulse");
+  }, 180);
 }
 
+// ⭐️ 뷰파인더 사각형 내부의 인화 영역만 100% 일치하도록 정밀 캡처
 function captureCurrentFrame() {
   const video = document.getElementById("webcam");
+  const box = document.getElementById("viewfinder-box");
   const tempCanvas = document.createElement("canvas");
-  tempCanvas.width = video.videoWidth || 1280;
-  tempCanvas.height = video.videoHeight || 720;
+
+  const Vw = video.videoWidth || 1280;
+  const Vh = video.videoHeight || 720;
+
+  const isGrid = state.layoutMode === "grid";
+  const targetRatio = isGrid ? (494 / 468) : (496 / 236);
+
+  let cropX = 0;
+  let cropY = 0;
+  let cropW = Vw;
+  let cropH = Vh;
+
+  if (box && video.clientWidth > 0 && video.clientHeight > 0) {
+    const vRect = video.getBoundingClientRect();
+    const bRect = box.getBoundingClientRect();
+
+    const Dw = video.clientWidth;
+    const Dh = video.clientHeight;
+
+    // object-fit: cover 스케일 계산
+    const scale = Math.max(Dw / Vw, Dh / Vh);
+    const Sw = Vw * scale;
+    const Sh = Vh * scale;
+
+    const Ox = (Dw - Sw) / 2;
+    const Oy = (Dh - Sh) / 2;
+
+    const Bx = bRect.left - vRect.left;
+    const By = bRect.top - vRect.top;
+    const Bw = bRect.width;
+    const Bh = bRect.height;
+
+    // 비디오는 좌우 반전(scaleX(-1))되어 표시되므로 시각적 X 위치를 미러링하여 센서 원본 좌표 추출
+    const visualBx = Dw - (Bx + Bw);
+
+    cropX = (visualBx - Ox) / scale;
+    cropY = (By - Oy) / scale;
+    cropW = Bw / scale;
+    cropH = Bh / scale;
+
+    // 경계 클램핑
+    cropX = Math.max(0, Math.min(cropX, Vw - 10));
+    cropY = Math.max(0, Math.min(cropY, Vh - 10));
+    cropW = Math.max(10, Math.min(cropW, Vw - cropX));
+    cropH = Math.max(10, Math.min(cropH, Vh - cropY));
+  } else {
+    if (Vw / Vh > targetRatio) {
+      cropH = Vh;
+      cropW = Vh * targetRatio;
+      cropX = (Vw - cropW) / 2;
+      cropY = 0;
+    } else {
+      cropW = Vw;
+      cropH = Vw / targetRatio;
+      cropX = 0;
+      cropY = (Vh - cropH) / 2;
+    }
+  }
+
+  // 1200px 기준 고화질 캡처 캔버스 (타겟 인화 비율과 1:1 일치)
+  tempCanvas.width = 1200;
+  tempCanvas.height = Math.round(1200 / targetRatio);
   const ctx = tempCanvas.getContext("2d");
 
+  // 사용자 시각과 동일한 거울 모드 좌우 반전
   ctx.translate(tempCanvas.width, 0);
   ctx.scale(-1, 1);
 
@@ -640,8 +764,8 @@ function captureCurrentFrame() {
     ctx.filter = filterCss;
   }
 
-  ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-  return tempCanvas.toDataURL("image/jpeg", 0.9);
+  ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, tempCanvas.width, tempCanvas.height);
+  return tempCanvas.toDataURL("image/jpeg", 0.92);
 }
 
 function sleep(ms) {

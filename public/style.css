@@ -687,6 +687,7 @@ body {
 #screen-camera {
   padding: 0;
   background: black;
+  overflow: hidden;
 }
 
 .camera-wrapper {
@@ -696,6 +697,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
 }
 
 #webcam {
@@ -703,6 +705,143 @@ body {
   height: 100%;
   object-fit: cover;
   transform: scaleX(-1);
+}
+
+/* 📐 실제 인화 영역 사각형 뷰파인더 가이드 */
+.camera-viewfinder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.viewfinder-box {
+  position: relative;
+  /* 9999px 그림자로 사각형 바깥 영역을 어둡게 마스킹하여 사각형 내부만 밝게 강조 */
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.58), 0 0 25px rgba(56, 189, 248, 0.4);
+  border: 2.5px solid #38bdf8;
+  border-radius: 14px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+.viewfinder-box.flash-pulse {
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.58), 0 0 45px rgba(255, 255, 255, 0.95) !important;
+}
+
+/* 4개 코너 브라켓 */
+.corner-bracket {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: #ffffff;
+  border-style: solid;
+  pointer-events: none;
+}
+
+.corner-tl {
+  top: -2px;
+  left: -2px;
+  border-width: 3.5px 0 0 3.5px;
+  border-top-left-radius: 12px;
+}
+
+.corner-tr {
+  top: -2px;
+  right: -2px;
+  border-width: 3.5px 3.5px 0 0;
+  border-top-right-radius: 12px;
+}
+
+.corner-bl {
+  bottom: -2px;
+  left: -2px;
+  border-width: 0 0 3.5px 3.5px;
+  border-bottom-left-radius: 12px;
+}
+
+.corner-br {
+  bottom: -2px;
+  right: -2px;
+  border-width: 0 3.5px 3.5px 0;
+  border-bottom-right-radius: 12px;
+}
+
+/* 중앙 십자선 가이드 */
+.viewfinder-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.viewfinder-crosshair::before,
+.viewfinder-crosshair::after {
+  content: '';
+  position: absolute;
+  background: #ffffff;
+}
+
+.viewfinder-crosshair::before {
+  top: 12px;
+  left: 0;
+  width: 26px;
+  height: 2px;
+}
+
+.viewfinder-crosshair::after {
+  top: 0;
+  left: 12px;
+  width: 2px;
+  height: 26px;
+}
+
+/* 상단 인화 영역 라벨 배지 */
+.viewfinder-label-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.84);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  backdrop-filter: blur(8px);
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: clamp(11.5px, 2.4vw, 13px);
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  letter-spacing: -0.2px;
+  margin-top: 2px;
+}
+
+/* 하단 안내 문구 */
+.viewfinder-bottom-hint {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  color: #fef08a;
+  border: 1px solid rgba(254, 240, 138, 0.3);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: clamp(10.5px, 2.2vw, 12px);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  margin-bottom: 2px;
 }
 
 .camera-top-indicator {

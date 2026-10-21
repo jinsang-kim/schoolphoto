@@ -157,6 +157,31 @@
       <div class="camera-wrapper">
         <video id="webcam" autoplay playsinline muted></video>
         
+        <!-- 📐 실제 인화 영역 가이드 사각형 뷰파인더 -->
+        <div id="camera-viewfinder" class="camera-viewfinder">
+          <div class="viewfinder-box" id="viewfinder-box">
+            <!-- 4개 코너 브라켓 -->
+            <span class="corner-bracket corner-tl"></span>
+            <span class="corner-bracket corner-tr"></span>
+            <span class="corner-bracket corner-bl"></span>
+            <span class="corner-bracket corner-br"></span>
+            
+            <!-- 중앙 십자선 가이드 -->
+            <span class="viewfinder-crosshair"></span>
+
+            <!-- 상단 인화 영역 라벨 배지 -->
+            <div class="viewfinder-label-pill">
+              <i data-lucide="crop"></i>
+              <span id="viewfinder-label-text">📸 실제 인화 영역 (포토 슬롯)</span>
+            </div>
+            
+            <!-- 하단 안내 문구 -->
+            <div class="viewfinder-bottom-hint">
+              <span>※ 이 사각형 안쪽의 모습만 사진으로 출력됩니다!</span>
+            </div>
+          </div>
+        </div>
+
         <div class="camera-top-indicator">
           <div class="step-indicator" id="cut-indicator">
             <span class="active">1</span> / 4
