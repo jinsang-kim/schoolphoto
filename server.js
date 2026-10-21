@@ -16,23 +16,76 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// 업로드 및 사진 캐시 저장소 (Vercel Serverless 및 로컬 호환)
-const uploadDir = path.join(os.tmpdir(), "photobooth_uploads");
-if (!fs.existsSync(uploadDir)) {
-  try {
+// 업로드 및 사진 캐시 저장소 (로컬 지속성 및 7일 유효기간 관리)
+const RETENTION_DAYS = 7;
+const RETENTION_SECONDS = 7 * 24 * 60 * 60; // 604,800 초 (ImgBB 만료 파라미터)
+const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000; // 604,800,000 밀리초
+
+// 로컬 uploads 폴더 우선 사용 (서버 재시작 후에도 7일간 유지), 실패 시 os.tmpdir fallback
+const localUploadsDir = path.join(__dirname, "uploads");
+let uploadDir = localUploadsDir;
+try {
+  if (!fs.existsSync(localUploadsDir)) {
+    fs.mkdirSync(localUploadsDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn("로컬 uploads 폴더 생성 실패, 임시 디렉토리 사용:", e.message);
+  uploadDir = path.join(os.tmpdir(), "photobooth_uploads");
+  if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
-  } catch (e) {
-    console.error("Upload dir creation error:", e);
   }
 }
 const memoryPhotos = new Map();
+
+// 7일 지난 만료 파일 자동 정리 함수
+function cleanExpiredPhotos() {
+  try {
+    const now = Date.now();
+    if (fs.existsSync(uploadDir)) {
+      const files = fs.readdirSync(uploadDir);
+      let removedCount = 0;
+      for (const file of files) {
+        if (file === ".gitkeep") continue;
+        const filePath = path.join(uploadDir, file);
+        try {
+          const stats = fs.statSync(filePath);
+          if (now - stats.mtimeMs > RETENTION_MS) {
+            fs.unlinkSync(filePath);
+            memoryPhotos.delete(file);
+            removedCount++;
+          }
+        } catch (fErr) {
+          // ignore individual file stat/unlink error
+        }
+      }
+      if (removedCount > 0) {
+        console.log(`[STORAGE CLEANUP] 만료된 사진 ${removedCount}개가 정리되었습니다 (보관기간: 7일).`);
+      }
+    }
+  } catch (err) {
+    console.error("[STORAGE CLEANUP ERROR]:", err.message);
+  }
+}
+
+// 서버 시작 시 및 1시간마다 만료 사진 자동 청소
+cleanExpiredPhotos();
+setInterval(cleanExpiredPhotos, 60 * 60 * 1000);
 
 // 정적 파일 서빙
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/uploads/:fileName", (req, res) => {
   const fileName = req.params.fileName;
   const filePath = path.join(uploadDir, fileName);
+
   if (fs.existsSync(filePath)) {
+    try {
+      const stats = fs.statSync(filePath);
+      if (Date.now() - stats.mtimeMs > RETENTION_MS) {
+        fs.unlinkSync(filePath);
+        memoryPhotos.delete(fileName);
+        return res.status(410).send("사진 보관 유효기간(7일)이 만료되었습니다.");
+      }
+    } catch (e) {}
     return res.sendFile(filePath);
   }
   if (memoryPhotos.has(fileName)) {
@@ -276,12 +329,13 @@ app.get("/download/:fileName", (req, res) => {
   `);
 });
 
-// 무료 클라우드 이미지 CDN 업로드 함수 (Vercel 서버리스 환경 지원)
+// 무료 클라우드 이미지 CDN 업로드 함수 (Vercel 서버리스 및 모바일 LTE 다운로드 지원 - 7일 자동 만료 적용)
 async function uploadToCloudCDN(base64Data) {
-  // 1. ImgBB 업로드 시도
+  // 1. ImgBB 업로드 시도 (expiration=604800 설정으로 7일 후 CDN 서버에서 자동 영구 삭제)
   try {
     const params = new URLSearchParams();
     params.append("image", base64Data);
+    params.append("expiration", String(RETENTION_SECONDS)); // 7일 (604,800초)
     const res = await fetch("https://api.imgbb.com/1/upload?key=41dc94f09d8d6dc3e3a9c69d80d2105a", {
       method: "POST",
       body: params,
@@ -289,7 +343,7 @@ async function uploadToCloudCDN(base64Data) {
     });
     const json = await res.json();
     if (json.data && json.data.url) {
-      console.log("[CLOUD CDN] ImgBB 업로드 성공:", json.data.url);
+      console.log("[CLOUD CDN] ImgBB 업로드 성공 (유효기간: 7일):", json.data.url);
       return json.data.url;
     }
   } catch (e1) {

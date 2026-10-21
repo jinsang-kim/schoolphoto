@@ -49,12 +49,28 @@
     }
     .tip { font-size: 13px; color: #64748b; text-align: center; line-height: 1.5; }
     .not-found { text-align: center; padding: 40px 20px; color: #94a3b8; }
+    .retention-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 6px 14px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 9999px;
+      font-size: 13px;
+      color: #38bdf8;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>✨ 인생네컷 다운로드 ✨</h1>
     <p>소중한 추억을 스마트폰에 저장해보세요!</p>
+    <div class="retention-badge" id="retention-badge">
+      📅 유효기간: 촬영일로부터 7일간 보관
+    </div>
   </div>
 
   <div class="preview-card" id="card-box">
@@ -66,6 +82,7 @@
     <a id="dl-btn" href="#" download="life4cut_photo.jpg" class="download-btn">
       💾 고화질 사진 저장하기
     </a>
+    <p class="tip">※ 보관 유효기간(7일)이 지나면 개인정보 보호를 위해 자동 삭제됩니다.</p>
     <p class="tip">※ 아이폰/갤럭시: 사진을 길게 누른 후 '사진 앱에 저장'을 터치하셔도 됩니다.</p>
   </div>
 
