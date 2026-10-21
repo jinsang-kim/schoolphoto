@@ -988,8 +988,12 @@ function renderCompositeFrame(ctx, theme, W, H, loadedImages, qrImage = null) {
       }
     });
 
-    // 3. 여고생 다꾸 스티커 오버레이 (파스텔 마스킹 테이프, 새틴 리본, 3D 하트, 진주)
-    drawHighTeenDecoOverlays(ctx, theme, 0, W, H, padX, topMargin, photoW, photoH, gapX, gapY, s, false);
+    // 3. 사진 위 오버레이 (할로윈 테마 시 사진 프레임을 앞으로 붙잡는 3D 캐릭터 액션 연출)
+    if (theme.category === "halloween") {
+      drawHalloweenGrippingCharacters(ctx, theme, 0, W, H, padX, topMargin, photoW, photoH, gapX, gapY, s, false);
+    } else {
+      drawHighTeenDecoOverlays(ctx, theme, 0, W, H, padX, topMargin, photoW, photoH, gapX, gapY, s, false);
+    }
 
     // 4. 하단 통합 정보 및 실제 인쇄용 미니 QR 코드
     drawBottomOrganizedInfo(ctx, theme, 0, W, H, dateStr, s, false, qrImage);
@@ -1025,7 +1029,11 @@ function renderCompositeFrame(ctx, theme, W, H, loadedImages, qrImage = null) {
         }
       }
 
-      drawHighTeenDecoOverlays(ctx, theme, colX, colWidth, H, padX, topMargin, photoW, photoH, 0, gapY, s, true);
+      if (theme.category === "halloween") {
+        drawHalloweenGrippingCharacters(ctx, theme, colX, colWidth, H, padX, topMargin, photoW, photoH, 0, gapY, s, true);
+      } else {
+        drawHighTeenDecoOverlays(ctx, theme, colX, colWidth, H, padX, topMargin, photoW, photoH, 0, gapY, s, true);
+      }
       drawBottomOrganizedInfo(ctx, theme, colX, colWidth, H, dateStr, s, true, qrImage);
 
       ctx.restore();
@@ -1542,6 +1550,580 @@ function drawHighTeenDecoOverlays(ctx, theme, colX, W, H, padX, topMargin, photo
       drawGlossy3DHeart(ctx, colX + W - padX - 8 * st, topMargin + photoH + gapY * 0.5, 18 * st, "#f472b6");
     }
   }
+
+  ctx.restore();
+}
+
+// ====================================================
+// 🎃 3D 할로윈 캐릭터 인터랙티브 액션 엔진 (사진 프레임을 앞쪽에서 꽉 붙잡는 연출)
+// ====================================================
+function drawHalloweenGrippingCharacters(ctx, theme, colX, W, H, padX, topMargin, photoW, photoH, gapX, gapY, s, isStrip) {
+  ctx.save();
+  const cx = colX + W / 2;
+
+  if (!isStrip) {
+    // 📸 2×2 엽서형 모드 캐릭터 액션 배치
+    const x0 = padX;
+    const y0 = topMargin;
+    const x1 = padX + photoW + gapX;
+    const y1 = topMargin;
+    const x2 = padX;
+    const y2 = topMargin + photoH + gapY;
+    const x3 = padX + photoW + gapX;
+    const y3 = topMargin + photoH + gapY;
+
+    // 1. [1번 사진 상단]: 마녀모자 꼬마유령이 프레임 위에서 고개를 내밀고 양손으로 사진을 꼭 붙잡음!
+    drawGrippingGhostWithWitchHat(ctx, x0 + photoW * 0.35, y0, s);
+    // 1번 사진 우측 상단 모서리에 올라앉은 잭오랜턴 호박
+    drawTopEdgePumpkin(ctx, x0 + photoW * 0.82, y0, s);
+
+    // 2. [2번 사진 상단]: 윙크 유령 + 귀여운 검은 고양이가 앞발로 사진 프레임을 붙잡고 있음!
+    drawGrippingGhostWinking(ctx, x1 + photoW * 0.32, y1, s);
+    drawGrippingBlackCat(ctx, x1 + photoW * 0.76, y1, s);
+
+    // 3. [3번 사진 좌측]: 꼬마 유령이 사진 왼쪽 프레임 밖에서 고개를 삐죽 내밀며 옆 테두리를 손으로 꼭 쥠!
+    drawSidePeekingGhost(ctx, x2, y2 + photoH * 0.42, s);
+
+    // 4. [4번 사진 우측 하단]: 호박 속에서 쏙 나온 꼬마유령이 사진 우측 하단 모서리를 살포시 짚고 있음!
+    drawCornerPumpkinGhost(ctx, x3 + photoW, y3 + photoH, s);
+
+    // 5. 프레임 교차점 및 모서리 빛나는 황금 별 스터드 핀
+    const gridCenterY = topMargin + photoH + gapY / 2;
+    drawGoldenStarCornerPin(ctx, cx, gridCenterY, 18 * s);
+    drawGoldenStarCornerPin(ctx, x0 + 10 * s, y0 + 10 * s, 10 * s);
+    drawGoldenStarCornerPin(ctx, x1 + photoW - 10 * s, y1 + 10 * s, 10 * s);
+    drawGoldenStarCornerPin(ctx, x2 + 10 * s, y2 + photoH - 10 * s, 10 * s);
+
+    // 상단 양옆 으스스 박쥐 날개 포인트
+    drawMiniBatSilhouette(ctx, x0 + 20 * s, y0 - 18 * s, 18 * s);
+    drawMiniBatSilhouette(ctx, x1 + photoW - 20 * s, y1 - 18 * s, 16 * s);
+
+  } else {
+    // 🎞️ 4×1 스트립 모드 (2줄 분할) 캐릭터 액션 배치
+    const st = s * 0.78;
+    const x0 = colX + padX;
+    const y0 = topMargin;
+    const y1 = topMargin + (photoH + gapY);
+    const y2 = topMargin + (photoH + gapY) * 2;
+    const y3 = topMargin + (photoH + gapY) * 3;
+
+    // 1컷 상단: 마녀모자 꼬마유령이 두 손으로 사진을 붙잡음
+    drawGrippingGhostWithWitchHat(ctx, x0 + photoW * 0.38, y0, st);
+    drawTopEdgePumpkin(ctx, x0 + photoW * 0.82, y0, st);
+
+    // 2컷 우측 상단: 검은 고양이가 발을 얹고 있음
+    drawGrippingBlackCat(ctx, x0 + photoW * 0.78, y1, st);
+
+    // 3컷 좌측: 옆에서 빼꼼 내다보며 프레임을 쥐고 있는 유령
+    drawSidePeekingGhost(ctx, x0, y2 + photoH * 0.45, st);
+
+    // 4컷 우측 하단: 호박 유령이 모서리를 짚고 있음
+    drawCornerPumpkinGhost(ctx, x0 + photoW, y3 + photoH, st);
+
+    // 스트립 모서리 별 핀
+    drawGoldenStarCornerPin(ctx, x0 + 8 * st, y0 + 8 * st, 8 * st);
+    drawGoldenStarCornerPin(ctx, x0 + photoW - 8 * st, y0 + 8 * st, 8 * st);
+    drawMiniBatSilhouette(ctx, x0 + photoW * 0.15, y0 - 12 * st, 14 * st);
+  }
+
+  ctx.restore();
+}
+
+// 1. 마녀모자 꼬마유령 (사진 상단을 두 손으로 꼭 쥐고 있는 3D 액션)
+function drawGrippingGhostWithWitchHat(ctx, cx, frameY, s) {
+  ctx.save();
+  ctx.shadowColor = "rgba(10, 5, 20, 0.45)";
+  ctx.shadowBlur = 10 * s;
+  ctx.shadowOffsetY = 4 * s;
+
+  // 유령 상반신
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx, frameY - 26 * s, 36 * s, Math.PI, 0, false);
+  ctx.lineTo(cx + 36 * s, frameY + 2 * s);
+  ctx.lineTo(cx - 36 * s, frameY + 2 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // 마녀 고깔모자
+  ctx.fillStyle = "#1b1030";
+  ctx.beginPath();
+  ctx.ellipse(cx, frameY - 48 * s, 42 * s, 12 * s, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx - 24 * s, frameY - 48 * s);
+  ctx.quadraticCurveTo(cx + 5 * s, frameY - 96 * s, cx + 24 * s, frameY - 92 * s);
+  ctx.lineTo(cx + 22 * s, frameY - 48 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // 모자 오렌지 띠 & 금색 버클
+  ctx.fillStyle = "#f97316";
+  ctx.fillRect(cx - 22 * s, frameY - 54 * s, 44 * s, 7 * s);
+  ctx.fillStyle = "#facc15";
+  ctx.fillRect(cx - 6 * s, frameY - 56 * s, 12 * s, 11 * s);
+  ctx.fillStyle = "#1b1030";
+  ctx.fillRect(cx - 3 * s, frameY - 54 * s, 6 * s, 7 * s);
+
+  // 눈
+  ctx.fillStyle = "#1e1b4b";
+  ctx.beginPath();
+  ctx.arc(cx - 13 * s, frameY - 26 * s, 5.5 * s, 0, Math.PI * 2);
+  ctx.arc(cx + 13 * s, frameY - 26 * s, 5.5 * s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx - 15 * s, frameY - 28 * s, 2 * s, 0, Math.PI * 2);
+  ctx.arc(cx + 11 * s, frameY - 28 * s, 2 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 볼터치
+  ctx.fillStyle = "rgba(249, 115, 22, 0.55)";
+  ctx.beginPath();
+  ctx.arc(cx - 20 * s, frameY - 18 * s, 6 * s, 0, Math.PI * 2);
+  ctx.arc(cx + 20 * s, frameY - 18 * s, 6 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 활짝 웃는 입
+  ctx.strokeStyle = "#be123c";
+  ctx.lineWidth = 2.5 * s;
+  ctx.beginPath();
+  ctx.arc(cx, frameY - 18 * s, 8 * s, 0.1 * Math.PI, 0.9 * Math.PI);
+  ctx.stroke();
+
+  // ⭐️ 핵심: 사진 프레임을 앞쪽에서 꽉 붙잡고 있는 하얀 유령 손 (Hands Gripping Over the Photo!)
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1.5 * s;
+  // 왼쪽 손
+  ctx.beginPath();
+  ctx.ellipse(cx - 23 * s, frameY + 7 * s, 9 * s, 10 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 1.2 * s;
+  ctx.beginPath();
+  ctx.moveTo(cx - 26 * s, frameY + 5 * s);
+  ctx.lineTo(cx - 26 * s, frameY + 13 * s);
+  ctx.moveTo(cx - 20 * s, frameY + 5 * s);
+  ctx.lineTo(cx - 20 * s, frameY + 13 * s);
+  ctx.stroke();
+
+  // 오른쪽 손
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1.5 * s;
+  ctx.beginPath();
+  ctx.ellipse(cx + 23 * s, frameY + 7 * s, 9 * s, 10 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 1.2 * s;
+  ctx.beginPath();
+  ctx.moveTo(cx + 20 * s, frameY + 5 * s);
+  ctx.lineTo(cx + 20 * s, frameY + 13 * s);
+  ctx.moveTo(cx + 26 * s, frameY + 5 * s);
+  ctx.lineTo(cx + 26 * s, frameY + 13 * s);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// 2. 윙크하는 귀여운 유령 (사진 상단을 두 손으로 쥐고 있음)
+function drawGrippingGhostWinking(ctx, cx, frameY, s) {
+  ctx.save();
+  ctx.shadowColor = "rgba(10, 5, 20, 0.45)";
+  ctx.shadowBlur = 10 * s;
+  ctx.shadowOffsetY = 4 * s;
+
+  // 유령 머리
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx, frameY - 22 * s, 30 * s, Math.PI, 0, false);
+  ctx.lineTo(cx + 30 * s, frameY + 2 * s);
+  ctx.lineTo(cx - 30 * s, frameY + 2 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // 윙크 눈
+  ctx.fillStyle = "#1e1b4b";
+  ctx.beginPath();
+  ctx.arc(cx - 10 * s, frameY - 22 * s, 4.5 * s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx - 11.5 * s, frameY - 23.5 * s, 1.5 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#1e1b4b";
+  ctx.lineWidth = 2.5 * s;
+  ctx.beginPath();
+  ctx.arc(cx + 10 * s, frameY - 22 * s, 5.5 * s, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.stroke();
+
+  // 볼터치
+  ctx.fillStyle = "rgba(249, 115, 22, 0.55)";
+  ctx.beginPath();
+  ctx.arc(cx - 16 * s, frameY - 14 * s, 5 * s, 0, Math.PI * 2);
+  ctx.arc(cx + 16 * s, frameY - 14 * s, 5 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 입
+  ctx.fillStyle = "#e11d48";
+  ctx.beginPath();
+  ctx.arc(cx, frameY - 14 * s, 6 * s, 0, Math.PI);
+  ctx.closePath();
+  ctx.fill();
+
+  // ⭐️ 사진을 잡고 있는 두 손!
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1.2 * s;
+  ctx.beginPath();
+  ctx.ellipse(cx - 18 * s, frameY + 5 * s, 7.5 * s, 8.5 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(cx + 18 * s, frameY + 5 * s, 7.5 * s, 8.5 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// 3. 앞발로 사진 프레임을 붙잡고 있는 검은 고양이 (Cat Paws Gripping Over Photo!)
+function drawGrippingBlackCat(ctx, cx, frameY, s) {
+  ctx.save();
+  ctx.shadowColor = "rgba(10, 5, 20, 0.5)";
+  ctx.shadowBlur = 10 * s;
+  ctx.shadowOffsetY = 4 * s;
+
+  // 고양이 머리
+  ctx.fillStyle = "#181024";
+  // 귀
+  ctx.beginPath();
+  ctx.moveTo(cx - 26 * s, frameY - 15 * s);
+  ctx.lineTo(cx - 20 * s, frameY - 48 * s);
+  ctx.lineTo(cx - 6 * s, frameY - 26 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx + 26 * s, frameY - 15 * s);
+  ctx.lineTo(cx + 20 * s, frameY - 48 * s);
+  ctx.lineTo(cx + 6 * s, frameY - 26 * s);
+  ctx.closePath();
+  ctx.fill();
+  // 귀 속 핑크
+  ctx.fillStyle = "#f472b6";
+  ctx.beginPath();
+  ctx.moveTo(cx - 22 * s, frameY - 18 * s);
+  ctx.lineTo(cx - 19 * s, frameY - 42 * s);
+  ctx.lineTo(cx - 9 * s, frameY - 26 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx + 22 * s, frameY - 18 * s);
+  ctx.lineTo(cx + 19 * s, frameY - 42 * s);
+  ctx.lineTo(cx + 9 * s, frameY - 26 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // 둥근 얼굴
+  ctx.fillStyle = "#181024";
+  ctx.beginPath();
+  ctx.arc(cx, frameY - 18 * s, 26 * s, Math.PI, 0, false);
+  ctx.lineTo(cx + 26 * s, frameY + 2 * s);
+  ctx.lineTo(cx - 26 * s, frameY + 2 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // 큰 노란 고양이 눈
+  ctx.fillStyle = "#fde047";
+  ctx.beginPath();
+  ctx.arc(cx - 11 * s, frameY - 18 * s, 7 * s, 0, Math.PI * 2);
+  ctx.arc(cx + 11 * s, frameY - 18 * s, 7 * s, 0, Math.PI * 2);
+  ctx.fill();
+  // 동공
+  ctx.fillStyle = "#0f172a";
+  ctx.beginPath();
+  ctx.ellipse(cx - 11 * s, frameY - 18 * s, 2.8 * s, 6 * s, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx + 11 * s, frameY - 18 * s, 2.8 * s, 6 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // 눈동자 빛 반사
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx - 13 * s, frameY - 20 * s, 2 * s, 0, Math.PI * 2);
+  ctx.arc(cx + 9 * s, frameY - 20 * s, 2 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 핑크 코 & 수염
+  ctx.fillStyle = "#f472b6";
+  ctx.beginPath();
+  ctx.arc(cx, frameY - 10 * s, 3 * s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1.2 * s;
+  ctx.beginPath();
+  ctx.moveTo(cx - 8 * s, frameY - 9 * s);
+  ctx.lineTo(cx - 26 * s, frameY - 12 * s);
+  ctx.moveTo(cx - 8 * s, frameY - 7 * s);
+  ctx.lineTo(cx - 26 * s, frameY - 4 * s);
+  ctx.moveTo(cx + 8 * s, frameY - 9 * s);
+  ctx.lineTo(cx + 26 * s, frameY - 12 * s);
+  ctx.moveTo(cx + 8 * s, frameY - 7 * s);
+  ctx.lineTo(cx + 26 * s, frameY - 4 * s);
+  ctx.stroke();
+
+  // ⭐️ 핵심: 사진 프레임 앞쪽을 붙잡고 있는 검은 고양이 앞발 (Cat Paws Gripping Over Photo!)
+  ctx.fillStyle = "#181024";
+  ctx.strokeStyle = "#334155";
+  ctx.lineWidth = 1.2 * s;
+  // 왼발
+  ctx.beginPath();
+  ctx.ellipse(cx - 18 * s, frameY + 7 * s, 8 * s, 9 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#f472b6";
+  ctx.beginPath();
+  ctx.ellipse(cx - 18 * s, frameY + 7 * s, 3.5 * s, 4 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 오른발
+  ctx.fillStyle = "#181024";
+  ctx.beginPath();
+  ctx.ellipse(cx + 18 * s, frameY + 7 * s, 8 * s, 9 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#f472b6";
+  ctx.beginPath();
+  ctx.ellipse(cx + 18 * s, frameY + 7 * s, 3.5 * s, 4 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// 4. 사진 왼쪽 프레임을 밖에서 잡고 있는 꼬마 유령 (Side Peeking Ghost)
+function drawSidePeekingGhost(ctx, frameX, cy, s) {
+  ctx.save();
+  ctx.shadowColor = "rgba(10, 5, 20, 0.45)";
+  ctx.shadowBlur = 10 * s;
+  ctx.shadowOffsetX = 3 * s;
+
+  // 유령 머리 (사진 왼쪽 프레임 밖에서 고개를 삐죽 내밂)
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(frameX - 6 * s, cy, 30 * s, -0.45 * Math.PI, 0.45 * Math.PI, false);
+  ctx.quadraticCurveTo(frameX - 42 * s, cy + 20 * s, frameX - 40 * s, cy);
+  ctx.quadraticCurveTo(frameX - 42 * s, cy - 20 * s, frameX - 6 * s, cy - 28 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // 갸웃하는 귀여운 눈과 입
+  ctx.fillStyle = "#1e1b4b";
+  ctx.beginPath();
+  ctx.arc(frameX - 12 * s, cy - 8 * s, 4.5 * s, 0, Math.PI * 2);
+  ctx.arc(frameX - 6 * s, cy + 6 * s, 4.5 * s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(frameX - 13 * s, cy - 9 * s, 1.8 * s, 0, Math.PI * 2);
+  ctx.arc(frameX - 7 * s, cy + 5 * s, 1.8 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(249, 115, 22, 0.55)";
+  ctx.beginPath();
+  ctx.arc(frameX - 18 * s, cy + 2 * s, 5 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ⭐️ 핵심: 사진 왼쪽 프레임을 앞으로 꼭 쥐고 있는 유령 손들 (Gripping Left Border!)
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1.5 * s;
+  // 윗손
+  ctx.beginPath();
+  ctx.ellipse(frameX + 8 * s, cy - 18 * s, 9 * s, 8 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // 아랫손
+  ctx.beginPath();
+  ctx.ellipse(frameX + 8 * s, cy + 18 * s, 9 * s, 8 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// 5. 사진 우측 하단 모서리를 살포시 짚고 있는 잭오랜턴 호박 유령 (Corner Pumpkin Ghost)
+function drawCornerPumpkinGhost(ctx, cornerX, cornerY, s) {
+  ctx.save();
+  ctx.shadowColor = "rgba(10, 5, 20, 0.5)";
+  ctx.shadowBlur = 12 * s;
+  ctx.shadowOffsetY = 4 * s;
+
+  const px = cornerX - 32 * s;
+  const py = cornerY - 24 * s;
+
+  // 1. 호박 속에서 쏙 올라온 꼬마 유령 (Pumpkin Ghost)
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(px, py - 26 * s, 22 * s, Math.PI, 0, false);
+  ctx.lineTo(px + 22 * s, py - 4 * s);
+  ctx.lineTo(px - 22 * s, py - 4 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // 유령 얼굴
+  ctx.fillStyle = "#1e1b4b";
+  ctx.beginPath();
+  ctx.arc(px - 7 * s, py - 27 * s, 3.5 * s, 0, Math.PI * 2);
+  ctx.arc(px + 7 * s, py - 27 * s, 3.5 * s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(249, 115, 22, 0.55)";
+  ctx.beginPath();
+  ctx.arc(px - 12 * s, py - 21 * s, 4 * s, 0, Math.PI * 2);
+  ctx.arc(px + 12 * s, py - 21 * s, 4 * s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#be123c";
+  ctx.lineWidth = 2 * s;
+  ctx.beginPath();
+  ctx.arc(px, py - 20 * s, 5 * s, 0.1 * Math.PI, 0.9 * Math.PI);
+  ctx.stroke();
+
+  // 2. 주황색 잭오랜턴 호박 본체 (사진 모서리 위를 살짝 덮음)
+  ctx.fillStyle = "#ea580c";
+  ctx.beginPath();
+  ctx.ellipse(px, py + 8 * s, 32 * s, 25 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#f97316";
+  ctx.beginPath();
+  ctx.ellipse(px, py + 8 * s, 20 * s, 24 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 호박 조각된 눈 & 웃는 입 (노란 촛불 불빛)
+  ctx.fillStyle = "#fef08a";
+  ctx.beginPath();
+  ctx.moveTo(px - 14 * s, py + 2 * s);
+  ctx.lineTo(px - 6 * s, py - 4 * s);
+  ctx.lineTo(px - 6 * s, py + 6 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(px + 14 * s, py + 2 * s);
+  ctx.lineTo(px + 6 * s, py - 4 * s);
+  ctx.lineTo(px + 6 * s, py + 6 * s);
+  ctx.closePath();
+  ctx.fill();
+  // 호박 웃는 입
+  ctx.beginPath();
+  ctx.arc(px, py + 12 * s, 13 * s, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.lineTo(px, py + 16 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // ⭐️ 핵심: 유령이 호박 앞쪽 & 사진 프레임 모서리를 살포시 짚고 있는 귀여운 두 손!
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1.2 * s;
+  ctx.beginPath();
+  ctx.ellipse(px - 16 * s, py - 4 * s, 7 * s, 8 * s, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(px + 16 * s, py - 4 * s, 7 * s, 8 * s, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// 6. 사진 상단 모서리에 걸터앉은 잭오랜턴 호박
+function drawTopEdgePumpkin(ctx, cx, frameY, s) {
+  ctx.save();
+  ctx.shadowColor = "rgba(10, 5, 20, 0.45)";
+  ctx.shadowBlur = 8 * s;
+  ctx.shadowOffsetY = 3 * s;
+
+  // 초록 꼭지
+  ctx.fillStyle = "#15803d";
+  ctx.fillRect(cx - 3 * s, frameY - 32 * s, 6 * s, 10 * s);
+
+  // 주황 호박 몸통
+  ctx.fillStyle = "#ea580c";
+  ctx.beginPath();
+  ctx.ellipse(cx, frameY - 14 * s, 24 * s, 19 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#f97316";
+  ctx.beginPath();
+  ctx.ellipse(cx, frameY - 14 * s, 15 * s, 18 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 노란 불빛 눈과 입
+  ctx.fillStyle = "#fef08a";
+  ctx.beginPath();
+  ctx.moveTo(cx - 11 * s, frameY - 18 * s);
+  ctx.lineTo(cx - 5 * s, frameY - 23 * s);
+  ctx.lineTo(cx - 5 * s, frameY - 14 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx + 11 * s, frameY - 18 * s);
+  ctx.lineTo(cx + 5 * s, frameY - 23 * s);
+  ctx.lineTo(cx + 5 * s, frameY - 14 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  // 웃는 입
+  ctx.beginPath();
+  ctx.arc(cx, frameY - 9 * s, 9 * s, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.lineTo(cx, frameY - 6 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// 7. 프레임 모서리 빛나는 골든 스타 핀
+function drawGoldenStarCornerPin(ctx, cx, cy, r) {
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  ctx.shadowColor = "rgba(250, 204, 21, 0.75)";
+  ctx.shadowBlur = r * 0.8;
+
+  ctx.fillStyle = "#facc15";
+  ctx.beginPath();
+  ctx.moveTo(0, -r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.quadraticCurveTo(0, 0, 0, r);
+  ctx.quadraticCurveTo(0, 0, -r, 0);
+  ctx.quadraticCurveTo(0, 0, 0, -r);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// 8. 미니 박쥐 실루엣 장식
+function drawMiniBatSilhouette(ctx, cx, cy, r) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = "#1e1035";
+
+  ctx.beginPath();
+  ctx.moveTo(0, r * 0.2);
+  ctx.quadraticCurveTo(-r * 0.5, -r * 0.6, -r, -r * 0.2);
+  ctx.quadraticCurveTo(-r * 0.7, r * 0.3, -r * 0.3, r * 0.1);
+  ctx.quadraticCurveTo(-r * 0.1, r * 0.4, 0, r * 0.2);
+  ctx.quadraticCurveTo(r * 0.1, r * 0.4, r * 0.3, r * 0.1);
+  ctx.quadraticCurveTo(r * 0.7, r * 0.3, r, -r * 0.2);
+  ctx.quadraticCurveTo(r * 0.5, -r * 0.6, 0, r * 0.2);
+  ctx.closePath();
+  ctx.fill();
 
   ctx.restore();
 }
