@@ -1226,136 +1226,158 @@ function drawHighTeenDecoOverlays(ctx, theme, colX, W, H, padX, topMargin, photo
   ctx.restore();
 }
 
-// 5. 하단 통합 정보 카드 (기념일 배지, 메인 타이틀, 서브 슬로건, 학교·동아리 시그니처, 촬영일자)
+// 5. 하단 감성 브랜딩 (투박한 사각 박스를 완전히 제거하고, 일러스트와 자연스럽게 어우러지는 하루필름/포토이즘 감성 디자인)
 function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip) {
   ctx.save();
   const cx = colX + W / 2;
   const st = isStrip ? s * 0.72 : s;
-
-  // 하단 카드 영역 설정 (사진이 1456*s에서 끝나므로 1472*s부터 296*s 크기로 배치)
-  const padX = isStrip ? 36 * s : 54 * s;
-  const cardX = colX + padX;
-  const cardW = W - padX * 2;
-  const cardY = 1472 * s;
-  const cardH = 296 * s;
-  const cardRadius = isStrip ? 18 * s : 22 * s;
-
-  // 1. 반투명 글래스모피즘 베이스 카드
-  ctx.shadowColor = "rgba(15, 23, 42, 0.24)";
-  ctx.shadowBlur = 18 * s;
-  ctx.shadowOffsetY = 6 * s;
-
-  ctx.fillStyle = theme.id === "dokdo_unesco"
-    ? "rgba(15, 23, 42, 0.90)"
-    : "rgba(255, 255, 255, 0.93)";
-  drawRoundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
-  ctx.fill();
-
-  ctx.shadowColor = "transparent";
-  ctx.strokeStyle = theme.border || "#f9a8d4";
-  ctx.lineWidth = 2.4 * s;
-  drawRoundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
-  ctx.stroke();
-
-  // 상단 은은한 하이라이트 글래스 광채
-  ctx.save();
-  ctx.beginPath();
-  drawRoundRect(ctx, cardX + 1, cardY + 1, cardW - 2, cardH - 2, cardRadius);
-  ctx.clip();
-  const innerGlow = ctx.createLinearGradient(cx, cardY, cx, cardY + 60 * s);
-  innerGlow.addColorStop(0, "rgba(255, 255, 255, 0.55)");
-  innerGlow.addColorStop(1, "rgba(255, 255, 255, 0)");
-  ctx.fillStyle = innerGlow;
-  ctx.fillRect(cardX, cardY, cardW, 60 * s);
-  ctx.restore();
-
-  // 색상 팔레트
   const isNight = theme.id === "dokdo_unesco";
-  const titleCol = isNight ? "#fef08a" : (theme.textColor || "#0f172a");
-  const subCol = isNight ? "#f5d0fe" : (theme.subTextColor || "#be185d");
-  const schoolCol = isNight ? "#ffffff" : "#0f172a";
-  const clubSubCol = isNight ? "#fef08a" : (theme.accentColor || "#e11d48");
-  const mottoCol = isNight ? "#cbd5e1" : "#475569";
-  const dividerCol = isNight ? "rgba(255, 255, 255, 0.18)" : "rgba(226, 232, 240, 0.95)";
+
+  // 1. 투박한 사각 박스 대신, 일러스트가 그대로 드러나면서 텍스트 가독성을 높여주는 부드러운 빛무리(미스트)
+  const mistGrad = ctx.createLinearGradient(0, 1450 * s, 0, 1800 * s);
+  if (isNight) {
+    mistGrad.addColorStop(0, "rgba(15, 23, 42, 0)");
+    mistGrad.addColorStop(0.3, "rgba(15, 23, 42, 0.45)");
+    mistGrad.addColorStop(1, "rgba(15, 23, 42, 0.75)");
+  } else {
+    mistGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+    mistGrad.addColorStop(0.25, "rgba(255, 255, 255, 0.35)");
+    mistGrad.addColorStop(0.65, "rgba(255, 255, 255, 0.58)");
+    mistGrad.addColorStop(1, "rgba(255, 255, 255, 0.75)");
+  }
+  ctx.fillStyle = mistGrad;
+  ctx.fillRect(colX, 1450 * s, W, 350 * s);
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // 2. [Row 1] 상단 기념일/테마 캡슐 필 배지
-  const badgeText = theme.category === "dokdo" ? "🇰🇷 10.25 독도의 날" : "🌍 5.21 세계 문화 다양성의 날";
-  ctx.font = `800 ${14 * st}px 'Pretendard', sans-serif`;
-  const bw = ctx.measureText(badgeText).width + (isStrip ? 24 * st : 30 * st);
-  const bh = (isStrip ? 23 : 26) * st;
-  const by = cardY + (isStrip ? 16 : 20) * s;
+  // 2. [Tag] 여고생 감성 미니 스티커 캡슐 태그
+  const badgeText = theme.category === "dokdo" ? "✦ 10.25 독도의 날 ✦" : "✦ 5.21 세계 문화 다양성의 날 ✦";
+  ctx.font = `800 ${14.5 * st}px 'Pretendard', sans-serif`;
+  const bw = ctx.measureText(badgeText).width + (isStrip ? 28 * st : 36 * st);
+  const bh = (isStrip ? 24 : 28) * st;
+  const by = (isStrip ? 1485 : 1488) * s;
 
-  ctx.fillStyle = isNight ? "rgba(30, 27, 75, 0.9)" : "rgba(255, 255, 255, 0.95)";
+  // 글로시 캡슐 스티커 배경
+  ctx.save();
+  ctx.shadowColor = isNight ? "rgba(0,0,0,0.5)" : "rgba(244, 114, 182, 0.35)";
+  ctx.shadowBlur = 10 * st;
+  ctx.shadowOffsetY = 3 * st;
+
+  ctx.fillStyle = isNight ? "rgba(30, 27, 75, 0.88)" : "rgba(255, 255, 255, 0.95)";
   drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
   ctx.fill();
-  ctx.strokeStyle = theme.border || "#f472b6";
-  ctx.lineWidth = 1.6 * st;
+
+  ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
+  ctx.lineWidth = 1.8 * st;
   drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
   ctx.stroke();
+
+  // 캡슐 상단 윤광 하이라이트
+  ctx.beginPath();
+  drawRoundRect(ctx, cx - bw / 2 + 4 * st, by + 2 * st, bw - 8 * st, bh / 2 - 2 * st, (bh / 2 - 2 * st) / 2);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+  ctx.fill();
+  ctx.restore();
 
   ctx.fillStyle = isNight ? "#fef08a" : (theme.accentColor || "#e11d48");
   ctx.fillText(badgeText, cx, by + bh / 2 + 0.5 * st);
 
-  // 3. [Row 2] 메인 타이틀 (선명하고 돋보이는 서체)
-  const titleY = cardY + (isStrip ? 66 : 76) * s;
-  const titleFontSize = Math.round((isStrip ? 22 : 32) * s);
+  // 3. [Title] 포토이즘/하루필름 스타일 감성 메인 레터링 타이틀
+  const titleY = (isStrip ? 1545 : 1552) * s;
+  const titleFontSize = Math.round((isStrip ? 25 : 36) * s);
   ctx.font = `800 ${titleFontSize}px 'Gowun Batang', 'Jua', serif`;
-  ctx.fillStyle = titleCol;
+
+  // 부드러운 화이트 외곽선 + 드롭섀도우로 일러스트 위에서 또렷하게 반짝임
+  ctx.save();
+  ctx.shadowColor = isNight ? "rgba(0,0,0,0.85)" : "rgba(255, 255, 255, 0.95)";
+  ctx.shadowBlur = 12 * st;
+  ctx.lineJoin = "round";
+  ctx.lineWidth = (isStrip ? 6 : 8) * st;
+  ctx.strokeStyle = isNight ? "rgba(15, 23, 42, 0.92)" : "#ffffff";
+  ctx.strokeText(theme.titleText, cx, titleY);
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = isNight ? "#fef08a" : (theme.textColor || "#0f172a");
   ctx.fillText(theme.titleText, cx, titleY);
+  ctx.restore();
 
-  // 타이틀 양옆 반짝이 포인트
+  // 타이틀 양옆 반짝이는 스파클 & 하트 포인트
   const titleHalfW = ctx.measureText(theme.titleText).width / 2;
-  const starDist = titleHalfW + (isStrip ? 16 : 22) * st;
-  drawTwinkleStar(ctx, cx - starDist, titleY - 2 * st, (isStrip ? 8 : 11) * st, "#facc15");
-  drawTwinkleStar(ctx, cx + starDist, titleY - 2 * st, (isStrip ? 8 : 11) * st, "#f472b6");
+  const starDist = titleHalfW + (isStrip ? 20 : 26) * st;
+  drawTwinkleStar(ctx, cx - starDist, titleY - 3 * st, (isStrip ? 10 : 13) * st, "#facc15");
+  drawTwinkleStar(ctx, cx + starDist, titleY - 3 * st, (isStrip ? 10 : 13) * st, "#f472b6");
 
-  // 4. [Row 3] 서브 슬로건 메시지
-  const subY = cardY + (isStrip ? 104 : 118) * s;
-  ctx.font = `700 ${(isStrip ? 12.5 : 15.5) * st}px 'Pretendard', sans-serif`;
-  ctx.fillStyle = subCol;
-  ctx.fillText(theme.subText, cx, subY);
+  // 4. [Sub] 감성 인용구 슬로건
+  const subY = (isStrip ? 1585 : 1598) * s;
+  ctx.font = `700 ${(isStrip ? 13 : 16) * st}px 'Gowun Batang', 'Pretendard', sans-serif`;
+  ctx.save();
+  ctx.lineWidth = 4 * st;
+  ctx.strokeStyle = isNight ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.95)";
+  ctx.strokeText(`“${theme.subText}”`, cx, subY);
+  ctx.fillStyle = isNight ? "#f5d0fe" : (theme.subTextColor || "#be185d");
+  ctx.fillText(`“${theme.subText}”`, cx, subY);
+  ctx.restore();
 
-  // 5. [Row 4] 섬세한 파스텔 구분선 & 미니 하트
-  const sepY = cardY + (isStrip ? 138 : 156) * s;
-  const sepW = isStrip ? 240 * s : 440 * s;
-  ctx.strokeStyle = dividerCol;
-  ctx.lineWidth = 1.2 * s;
+  // 5. [Divider] 러블리 도트 & 하트 포인트 라인
+  const sepY = (isStrip ? 1622 : 1642) * s;
+  const sepW = isStrip ? 260 * s : 480 * s;
+  ctx.save();
+  ctx.strokeStyle = isNight ? "rgba(255, 255, 255, 0.25)" : "rgba(244, 114, 182, 0.35)";
+  ctx.lineWidth = 1.5 * s;
+  ctx.setLineDash([4 * s, 4 * s]);
   ctx.beginPath();
   ctx.moveTo(cx - sepW / 2, sepY);
   ctx.lineTo(cx + sepW / 2, sepY);
   ctx.stroke();
+  ctx.restore();
 
-  // 구분선 중앙 미니 하트 장식
-  drawGlossy3DHeart(ctx, cx, sepY, (isStrip ? 9 : 12) * st, theme.accentColor || "#ec4899");
+  // 구분선 중앙 미니 입체 하트
+  drawGlossy3DHeart(ctx, cx, sepY, (isStrip ? 10 : 13) * st, theme.accentColor || "#ec4899");
 
-  // 6. [Row 5] 학교명 • 동아리 시그니처
-  const clubY = cardY + (isStrip ? 180 : 202) * s;
-  const clubFontSize = Math.round((isStrip ? 17 : 24) * s);
+  // 6. [Club] 학교명 • 동아리 시그니처 (세련된 하이틴 브랜드 감성)
+  const clubY = (isStrip ? 1664 : 1688) * s;
+  const clubFontSize = Math.round((isStrip ? 18 : 25) * s);
   ctx.font = `800 ${clubFontSize}px 'Gowun Batang', 'Pretendard', serif`;
-  ctx.fillStyle = schoolCol;
 
-  const clubHeader = `${theme.clubName}  •  ${theme.clubSub}`;
+  const clubHeader = `합천여자고등학교   ♡   ${theme.clubSub}`;
+  ctx.save();
+  ctx.lineWidth = 5 * st;
+  ctx.strokeStyle = isNight ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.95)";
+  ctx.strokeText(clubHeader, cx, clubY);
+  ctx.fillStyle = isNight ? "#ffffff" : "#0f172a";
   ctx.fillText(clubHeader, cx, clubY);
+  ctx.restore();
 
   const headerHalfW = ctx.measureText(clubHeader).width / 2;
-  const iconDist = headerHalfW + (isStrip ? 18 : 24) * st;
+  const iconDist = headerHalfW + (isStrip ? 20 : 26) * st;
   if (theme.category === "dokdo") {
-    drawMiniUnescoIcon(ctx, cx - iconDist, clubY - 1 * st, (isStrip ? 11 : 14) * st, clubSubCol);
-    drawMiniMugunghwaPin(ctx, cx + iconDist, clubY - 1 * st, (isStrip ? 10 : 13) * st);
+    drawMiniUnescoIcon(ctx, cx - iconDist, clubY - 1 * st, (isStrip ? 12 : 15) * st, isNight ? "#fef08a" : (theme.accentColor || "#e11d48"));
+    drawMiniMugunghwaPin(ctx, cx + iconDist, clubY - 1 * st, (isStrip ? 11 : 14) * st);
   } else {
-    drawGlossy3DHeart(ctx, cx - iconDist, clubY - 1 * st, (isStrip ? 10 : 13) * st, "#ec4899");
-    drawGlossy3DHeart(ctx, cx + iconDist, clubY - 1 * st, (isStrip ? 10 : 13) * st, "#ec4899");
+    drawGlossy3DHeart(ctx, cx - iconDist, clubY - 1 * st, (isStrip ? 11 : 14) * st, "#ec4899");
+    drawGlossy3DHeart(ctx, cx + iconDist, clubY - 1 * st, (isStrip ? 11 : 14) * st, "#ec4899");
   }
 
-  // 7. [Row 6] 동아리 모토 및 촬영일자
-  const footerY = cardY + (isStrip ? 220 : 248) * s;
-  ctx.font = `600 ${(isStrip ? 11.5 : 14) * st}px 'Pretendard', sans-serif`;
-  ctx.fillStyle = mottoCol;
-  const footerText = `${theme.clubMotto}   |   ${dateStr}`;
+  // 7. [Date & Motto] 레트로 필름 카메라 스타일 날짜 스탬프
+  const footerY = (isStrip ? 1704 : 1734) * s;
+  ctx.font = `700 ${(isStrip ? 12 : 14.5) * st}px 'Montserrat', 'Pretendard', sans-serif`;
+  const footerText = `DATE. ${dateStr}   •   ${theme.clubMotto}`;
+  ctx.save();
+  ctx.lineWidth = 4 * st;
+  ctx.strokeStyle = isNight ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.95)";
+  ctx.strokeText(footerText, cx, footerY);
+  ctx.fillStyle = isNight ? "#cbd5e1" : "#475569";
   ctx.fillText(footerText, cx, footerY);
+  ctx.restore();
+
+  // 8. 하단 좌/우 몽환적인 진주 & 3D 하트 데코
+  if (!isStrip) {
+    drawPearlCluster(ctx, cx - sepW / 2 - 20 * s, sepY, 6 * s);
+    drawPearlCluster(ctx, cx + sepW / 2 + 20 * s, sepY, 6 * s);
+    drawGlossy3DHeart(ctx, colX + 80 * s, 1720 * s, 16 * s, "#f472b6");
+    drawGlossy3DHeart(ctx, colX + W - 80 * s, 1720 * s, 16 * s, "#fb7185");
+  }
 
   ctx.restore();
 }
