@@ -285,6 +285,76 @@ const THEME_CONFIG = {
     cutLabels: ["DREAMY 💜", "SHINING ✨", "TULIP LOVE 🌷", "PEER CLUB 💕"],
     drawOverlay: "diversity_future_art",
   },
+
+  // ====================================================
+  // 🎃 [해피 할로윈 데이 (10월 31일)] 테마 2종 (학교 정보 일체 배제, 감성 판타지 할로윈)
+  // ====================================================
+  halloween_party: {
+    id: "halloween_party",
+    category: "halloween",
+    name: "할로윈 • 펌킨 & 캐슬 나이트 🎃",
+    subName: "Spooky Castle & Pumpkin Night",
+    desc: "황금빛 보름달과 유령의 성, 촛불 켜진 잭오랜턴과 호박 속 꼬마 유령",
+    icon: "🎃",
+    bgType: "halloween_party",
+    bgImageUrl: "/frames/halloween_party.jpg",
+    gradient: ["#1c0c30", "#38125a", "#782808"],
+    textColor: "#fed7aa",
+    titleStroke: "#18062b",
+    accentColor: "#f97316",
+    subTextColor: "#fdba74",
+    clubName: "",
+    clubSub: "HALLOWEEN FESTIVAL",
+    clubMotto: "A SPOOKY DAY, A BRIGHTER YOU • HAPPY HALLOWEEN 🎃",
+    border: "#f97316",
+    tapeColor: "rgba(249, 115, 22, 0.85)",
+    ribbonColor: "#ea580c",
+    cardBg: "#1f1235",
+    titleFont: "800 52px 'Jua', 'Montserrat', sans-serif",
+    subFont: "700 21px 'Pretendard', sans-serif",
+    dateBadgeText: "✦ 10.31 HAPPY HALLOWEEN ✦",
+    titleText: "해피 할로윈 데이",
+    subText: "호박 불빛과 꼬마 유령들이 함께하는 달콤 오싹한 파티 🎃",
+    sideQuoteLeft: "A SPOOKY DAY, A BRIGHTER YOU 🎃",
+    sideQuoteRight: "TRICK OR TREAT • SWEET NIGHT ✨",
+    stickers: ["🎃", "👻", "🦇", "🍬"],
+    cutLabels: ["PUMPKIN 🎃", "SPOOKY 👻", "BAT NIGHT 🦇", "CANDY 🍬"],
+    drawOverlay: "halloween_party_art",
+    isDark: true,
+  },
+  halloween_magic: {
+    id: "halloween_magic",
+    category: "halloween",
+    name: "할로윈 • 보랏빛 마법의 밤 👻",
+    subName: "Mystic Witch & Black Cat Magic",
+    desc: "신비로운 보랏빛 마법 가마솥과 검은 고양이, 밤하늘 꼬마 유령과 마법서",
+    icon: "👻",
+    bgType: "halloween_magic",
+    bgImageUrl: "/frames/halloween_magic.jpg",
+    gradient: ["#120826", "#431475", "#7e1d5a"],
+    textColor: "#e9d5ff",
+    titleStroke: "#0f0520",
+    accentColor: "#c084fc",
+    subTextColor: "#d8b4fe",
+    clubName: "",
+    clubSub: "MAGIC SPOOKY NIGHT",
+    clubMotto: "TRICK OR TREAT • SWEET CANDY & MAGIC SPELLS 🔮",
+    border: "#a855f7",
+    tapeColor: "rgba(192, 132, 252, 0.85)",
+    ribbonColor: "#9333ea",
+    cardBg: "#1c0d38",
+    titleFont: "800 52px 'Jua', 'Montserrat', sans-serif",
+    subFont: "700 21px 'Pretendard', sans-serif",
+    dateBadgeText: "✦ 10.31 TRICK OR TREAT MAGIC ✦",
+    titleText: "신비로운 유령의 마법 밤",
+    subText: "보랏빛 밤하늘 아래 마법 물약이 반짝이는 신비한 순간 👻",
+    sideQuoteLeft: "POTIONS • SPELLS • HALLOWEEN 🔮",
+    sideQuoteRight: "SWEET CANDY & WICKED MAGIC 🍬",
+    stickers: ["👻", "🔮", "🐈‍⬛", "✨"],
+    cutLabels: ["WITCH MAGIC", "BLACK CAT 🐈‍⬛", "POTION 🔮", "SPOOKY 👻"],
+    drawOverlay: "halloween_magic_art",
+    isDark: true,
+  },
 };
 
 // ⭐️ 여고생 선호도 1위 인생네컷 & 하루필름 & 포토이즘 대표 감성 필터 6종 엄선
@@ -373,10 +443,14 @@ function renderThemeList() {
         bgStyle = `linear-gradient(180deg, ${theme.gradient.join(", ")})`;
       }
 
-      const categoryBadge =
-        theme.category === "dokdo"
-          ? `<span style="position:absolute; top:4px; left:4px; background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fef08a; font-size:8.5px; font-weight:800; padding:1.5px 5px; border-radius:999px; z-index:2; box-shadow:0 2px 5px rgba(0,0,0,0.35);">독도의 날</span>`
-          : `<span style="position:absolute; top:4px; left:4px; background:linear-gradient(135deg,#ec4899,#8b5cf6); color:#ffffff; font-size:8.5px; font-weight:800; padding:1.5px 5px; border-radius:999px; z-index:2; box-shadow:0 2px 5px rgba(0,0,0,0.35);">문화다양성</span>`;
+      let categoryBadge = "";
+      if (theme.category === "dokdo") {
+        categoryBadge = `<span style="position:absolute; top:4px; left:4px; background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fef08a; font-size:8.5px; font-weight:800; padding:1.5px 5px; border-radius:999px; z-index:2; box-shadow:0 2px 5px rgba(0,0,0,0.35);">독도의 날</span>`;
+      } else if (theme.category === "diversity") {
+        categoryBadge = `<span style="position:absolute; top:4px; left:4px; background:linear-gradient(135deg,#ec4899,#8b5cf6); color:#ffffff; font-size:8.5px; font-weight:800; padding:1.5px 5px; border-radius:999px; z-index:2; box-shadow:0 2px 5px rgba(0,0,0,0.35);">문화다양성</span>`;
+      } else if (theme.category === "halloween") {
+        categoryBadge = `<span style="position:absolute; top:4px; left:4px; background:linear-gradient(135deg,#ea580c,#9333ea); color:#fed7aa; font-size:8.5px; font-weight:800; padding:1.5px 5px; border-radius:999px; z-index:2; box-shadow:0 2px 5px rgba(0,0,0,0.35);">🎃 할로윈</span>`;
+      }
 
       return `
         <div class="theme-card ${isActive}" data-theme="${key}" onclick="selectTheme('${key}')">
@@ -1141,17 +1215,18 @@ function drawKawaiiSampleSlot(ctx, x, y, w, h, theme, idx, s) {
   ctx.save();
   const radius = 14 * s;
   const borderPad = 8 * s;
+  const isHalloween = theme.category === "halloween";
 
   ctx.shadowColor = "rgba(15, 23, 42, 0.22)";
   ctx.shadowBlur = 16 * s;
   ctx.shadowOffsetY = 6 * s;
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = isHalloween ? "#180f28" : "#ffffff";
   drawRoundRect(ctx, x - borderPad, y - borderPad, w + borderPad * 2, h + borderPad * 2, radius + 4 * s);
   ctx.fill();
 
   ctx.shadowColor = "transparent";
-  ctx.strokeStyle = theme.border || "#f9a8d4";
+  ctx.strokeStyle = theme.border || (isHalloween ? "#f97316" : "#f9a8d4");
   ctx.lineWidth = 2.5 * s;
   drawRoundRect(ctx, x - borderPad, y - borderPad, w + borderPad * 2, h + borderPad * 2, radius + 4 * s);
   ctx.stroke();
@@ -1160,13 +1235,20 @@ function drawKawaiiSampleSlot(ctx, x, y, w, h, theme, idx, s) {
   drawRoundRect(ctx, x, y, w, h, radius);
   ctx.clip();
 
-  // 하루필름/포토이즘 스튜디오 파스텔 조명 그라데이션
-  const studioGrads = [
-    ["#fdf2f8", "#fce7f3", "#fbcfe8"],
-    ["#f0f9ff", "#e0f2fe", "#bae6fd"],
-    ["#fefce8", "#fef3c7", "#fde68a"],
-    ["#f5f3ff", "#ede9fe", "#ddd6fe"],
-  ];
+  // 하루필름/포토이즘 스튜디오 파스텔 조명 또는 할로윈 스푸키 그라데이션
+  const studioGrads = isHalloween
+    ? [
+        ["#2d124d", "#3b1660", "#6b21a8"],
+        ["#30151f", "#4f1c24", "#852618"],
+        ["#1e1035", "#371b58", "#5b21b6"],
+        ["#201235", "#431c53", "#782808"],
+      ]
+    : [
+        ["#fdf2f8", "#fce7f3", "#fbcfe8"],
+        ["#f0f9ff", "#e0f2fe", "#bae6fd"],
+        ["#fefce8", "#fef3c7", "#fde68a"],
+        ["#f5f3ff", "#ede9fe", "#ddd6fe"],
+      ];
   const gCols = studioGrads[idx % 4];
   const sg = ctx.createLinearGradient(x, y, x + w, y + h);
   sg.addColorStop(0, gCols[0]);
@@ -1176,33 +1258,171 @@ function drawKawaiiSampleSlot(ctx, x, y, w, h, theme, idx, s) {
   ctx.fillRect(x, y, w, h);
 
   // 은은한 스튜디오 보케 원
-  ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.fillStyle = isHalloween ? "rgba(254, 215, 170, 0.25)" : "rgba(255, 255, 255, 0.55)";
   ctx.beginPath();
   ctx.arc(x + w * 0.25, y + h * 0.28, w * 0.16, 0, Math.PI * 2);
   ctx.arc(x + w * 0.78, y + h * 0.72, w * 0.2, 0, Math.PI * 2);
   ctx.fill();
 
-  // 귀여운 하이틴 여고생 캐릭터 일러스트 실루엣 & 포즈 가이드
+  // 귀여운 캐릭터 일러스트 (할로윈 테마 시 꼬마 유령/잭오랜턴/검은고양이, 일반 테마 시 하이틴 캐릭터)
   const cx = x + w / 2;
   const cy = y + h * 0.46;
-  drawCuteGirlAvatar(ctx, cx, cy, Math.min(w, h) * 0.28, idx);
+  if (isHalloween) {
+    drawCuteHalloweenAvatar(ctx, cx, cy, Math.min(w, h) * 0.28, idx);
+  } else {
+    drawCuteGirlAvatar(ctx, cx, cy, Math.min(w, h) * 0.28, idx);
+  }
 
   // 포즈 추천 캡션 필
-  const poseNames = ["✨ 1컷 • 브이 포즈", "💕 2컷 • 손하트", "🌸 3컷 • 볼하트", "🎀 4컷 • 우정샷"];
+  const poseNames = isHalloween
+    ? ["🎃 1컷 • 으스스 포즈", "👻 2컷 • 꼬마 유령", "🔮 3컷 • 마법 물약", "🍬 4컷 • 트릭오어트릿"]
+    : ["✨ 1컷 • 브이 포즈", "💕 2컷 • 손하트", "🌸 3컷 • 볼하트", "🎀 4컷 • 우정샷"];
   const pText = poseNames[idx];
   ctx.font = `700 ${17 * s}px 'Pretendard', sans-serif`;
   const pw = ctx.measureText(pText).width + 26 * s;
   const ph = 30 * s;
   const py = y + h - 42 * s;
 
-  ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+  ctx.fillStyle = isHalloween ? "rgba(30, 16, 50, 0.92)" : "rgba(255, 255, 255, 0.88)";
   drawRoundRect(ctx, cx - pw / 2, py, pw, ph, ph / 2);
   ctx.fill();
 
-  ctx.fillStyle = "#be185d";
+  if (isHalloween) {
+    ctx.strokeStyle = theme.border || "#f97316";
+    ctx.lineWidth = 1.4 * s;
+    drawRoundRect(ctx, cx - pw / 2, py, pw, ph, ph / 2);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = isHalloween ? (theme.textColor || "#fed7aa") : "#be185d";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(pText, cx, py + ph / 2 + 1 * s);
+
+  ctx.restore();
+}
+
+// 🎃 할로윈 테마용 귀여운 캐릭터 아바타 (학교 교복 일체 미사용, 꼬마유령/호박/고양이)
+function drawCuteHalloweenAvatar(ctx, cx, cy, r, idx) {
+  ctx.save();
+  const type = idx % 4;
+
+  if (type === 0 || type === 3) {
+    // 꼬마 유령 (0: 마녀모자 유령, 3: 윙크 마법유령)
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "rgba(192, 132, 252, 0.4)";
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(cx, cy - r * 0.15, r * 0.78, Math.PI, 0, false);
+    ctx.lineTo(cx + r * 0.78, cy + r * 0.55);
+    ctx.quadraticCurveTo(cx + r * 0.5, cy + r * 0.95, cx + r * 0.25, cy + r * 0.55);
+    ctx.quadraticCurveTo(cx, cy + r * 0.95, cx - r * 0.25, cy + r * 0.55);
+    ctx.quadraticCurveTo(cx - r * 0.5, cy + r * 0.95, cx - r * 0.78, cy + r * 0.55);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.shadowColor = "transparent";
+
+    if (type === 0) {
+      // 마녀 모자
+      ctx.fillStyle = "#1e1035";
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - r * 0.65, r * 0.85, r * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 0.45, cy - r * 0.65);
+      ctx.quadraticCurveTo(cx + r * 0.1, cy - r * 1.5, cx + r * 0.35, cy - r * 1.45);
+      ctx.lineTo(cx + r * 0.45, cy - r * 0.65);
+      ctx.closePath();
+      ctx.fill();
+      // 모자 오렌지 리본
+      ctx.fillStyle = "#f97316";
+      ctx.fillRect(cx - r * 0.45, cy - r * 0.75, r * 0.9, r * 0.12);
+    }
+
+    // 눈
+    ctx.fillStyle = "#1e1b4b";
+    if (type === 3) {
+      ctx.beginPath();
+      ctx.arc(cx - r * 0.3, cy - r * 0.12, r * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#1e1b4b";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx + r * 0.3, cy - r * 0.12, r * 0.14, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(cx - r * 0.28, cy - r * 0.12, r * 0.13, 0, Math.PI * 2);
+      ctx.arc(cx + r * 0.28, cy - r * 0.12, r * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 오렌지 볼터치
+    ctx.fillStyle = "rgba(249, 115, 22, 0.45)";
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.42, cy + r * 0.05, r * 0.12, 0, Math.PI * 2);
+    ctx.arc(cx + r * 0.42, cy + r * 0.05, r * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 웃는 입
+    ctx.fillStyle = "#e11d48";
+    ctx.beginPath();
+    ctx.arc(cx, cy + r * 0.12, r * 0.18, 0, Math.PI);
+    ctx.closePath();
+    ctx.fill();
+
+    drawMiniPumpkinIcon(ctx, cx + r * 0.62, cy + r * 0.32, r * 0.28);
+  } else if (type === 1) {
+    // 잭오랜턴 호박 캐릭터
+    drawMiniPumpkinIcon(ctx, cx, cy, r * 0.92);
+  } else {
+    // 귀여운 검은 고양이
+    ctx.fillStyle = "#181124";
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.65, cy - r * 0.2);
+    ctx.lineTo(cx - r * 0.45, cy - r * 0.85);
+    ctx.lineTo(cx - r * 0.15, cy - r * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + r * 0.65, cy - r * 0.2);
+    ctx.lineTo(cx + r * 0.45, cy - r * 0.85);
+    ctx.lineTo(cx + r * 0.15, cy - r * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#f472b6";
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.55, cy - r * 0.25);
+    ctx.lineTo(cx - r * 0.45, cy - r * 0.72);
+    ctx.lineTo(cx - r * 0.25, cy - r * 0.38);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + r * 0.55, cy - r * 0.25);
+    ctx.lineTo(cx + r * 0.45, cy - r * 0.72);
+    ctx.lineTo(cx + r * 0.25, cy - r * 0.38);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#181124";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.75, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#facc15";
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.28, cy - r * 0.05, r * 0.22, 0, Math.PI * 2);
+    ctx.arc(cx + r * 0.28, cy - r * 0.05, r * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.ellipse(cx - r * 0.28, cy - r * 0.05, r * 0.08, r * 0.18, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx + r * 0.28, cy - r * 0.05, r * 0.08, r * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f472b6";
+    ctx.beginPath();
+    ctx.arc(cx, cy + r * 0.18, r * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 }
@@ -1276,31 +1496,51 @@ function drawCuteGirlAvatar(ctx, cx, cy, r, idx) {
 function drawHighTeenDecoOverlays(ctx, theme, colX, W, H, padX, topMargin, photoW, photoH, gapX, gapY, s, isStrip) {
   ctx.save();
   const cx = colX + W / 2;
+  const isHalloween = theme.category === "halloween";
 
   if (!isStrip) {
-    // (1) 상단 좌/우 사진 코너 파스텔 마스킹 테이프
+    // (1) 상단 좌/우 사진 코너 마스킹 테이프
     drawPastelMaskingTape(ctx, colX + padX + 36 * s, topMargin - 4 * s, 92 * s, 22 * s, -0.22, theme.tapeColor);
     drawPastelMaskingTape(ctx, colX + W - padX - 36 * s, topMargin - 4 * s, 92 * s, 22 * s, 0.22, theme.tapeColor);
 
-    // (2) 2x2 사진 교차점 중앙 귀여운 새틴 리본 & 보석 브로치
+    // (2) 2x2 사진 교차점 중앙
     const gridCenterY = topMargin + photoH + gapY / 2;
-    drawSatinRibbonBow(ctx, cx, gridCenterY, 34 * s, theme.ribbonColor || "#f472b6");
+    if (isHalloween) {
+      drawMiniPumpkinIcon(ctx, cx, gridCenterY, 24 * s);
+    } else {
+      drawSatinRibbonBow(ctx, cx, gridCenterY, 34 * s, theme.ribbonColor || "#f472b6");
+    }
 
-    // (3) 사진 모서리 통통한 3D 하트 & 진주 & 무궁화/봄꽃 스티커
-    drawGlossy3DHeart(ctx, colX + padX - 8 * s, topMargin + photoH * 0.5, 22 * s, "#f472b6");
-    drawGlossy3DHeart(ctx, colX + W - padX + 8 * s, topMargin + photoH * 1.5 + gapY, 22 * s, "#fb7185");
-    drawPearlCluster(ctx, colX + W - padX + 4 * s, topMargin + 38 * s, 7 * s);
-    drawPearlCluster(ctx, colX + padX - 4 * s, topMargin + photoH * 2 + gapY - 24 * s, 7 * s);
+    // (3) 사진 모서리 스티커
+    if (isHalloween) {
+      drawMiniGhostIcon(ctx, colX + padX - 8 * s, topMargin + photoH * 0.5, 18 * s);
+      drawMiniPumpkinIcon(ctx, colX + W - padX + 8 * s, topMargin + photoH * 1.5 + gapY, 18 * s);
+      drawTwinkleStar(ctx, colX + W - padX + 4 * s, topMargin + 38 * s, 11 * s, "#facc15");
+      drawTwinkleStar(ctx, colX + padX - 4 * s, topMargin + photoH * 2 + gapY - 24 * s, 11 * s, "#f97316");
 
-    // (4) 하단 정보 카드 상단 좌/우 귀여운 리본 & 하트 포인트
-    drawSatinRibbonBow(ctx, colX + padX + 36 * s, 1472 * s, 22 * s, theme.ribbonColor || "#f472b6");
-    drawGlossy3DHeart(ctx, colX + W - padX - 36 * s, 1472 * s, 18 * s, "#f472b6");
+      // (4) 하단 정보 상단 좌/우
+      drawMiniPumpkinIcon(ctx, colX + padX + 36 * s, 1472 * s, 16 * s);
+      drawMiniGhostIcon(ctx, colX + W - padX - 36 * s, 1472 * s, 16 * s);
+    } else {
+      drawGlossy3DHeart(ctx, colX + padX - 8 * s, topMargin + photoH * 0.5, 22 * s, "#f472b6");
+      drawGlossy3DHeart(ctx, colX + W - padX + 8 * s, topMargin + photoH * 1.5 + gapY, 22 * s, "#fb7185");
+      drawPearlCluster(ctx, colX + W - padX + 4 * s, topMargin + 38 * s, 7 * s);
+      drawPearlCluster(ctx, colX + padX - 4 * s, topMargin + photoH * 2 + gapY - 24 * s, 7 * s);
+
+      drawSatinRibbonBow(ctx, colX + padX + 36 * s, 1472 * s, 22 * s, theme.ribbonColor || "#f472b6");
+      drawGlossy3DHeart(ctx, colX + W - padX - 36 * s, 1472 * s, 18 * s, "#f472b6");
+    }
   } else {
     // 스트립 모드용 아기자기한 리본 & 마스킹테이프
     const st = s * 0.72;
     drawPastelMaskingTape(ctx, cx, topMargin - 4 * s, 76 * st, 18 * st, -0.06, theme.tapeColor);
-    drawSatinRibbonBow(ctx, colX + padX + 10 * st, topMargin + photoH * 2 + gapY * 1.5, 22 * st, theme.ribbonColor || "#f472b6");
-    drawGlossy3DHeart(ctx, colX + W - padX - 8 * st, topMargin + photoH + gapY * 0.5, 18 * st, "#f472b6");
+    if (isHalloween) {
+      drawMiniPumpkinIcon(ctx, colX + padX + 10 * st, topMargin + photoH * 2 + gapY * 1.5, 18 * st);
+      drawMiniGhostIcon(ctx, colX + W - padX - 8 * st, topMargin + photoH + gapY * 0.5, 16 * st);
+    } else {
+      drawSatinRibbonBow(ctx, colX + padX + 10 * st, topMargin + photoH * 2 + gapY * 1.5, 22 * st, theme.ribbonColor || "#f472b6");
+      drawGlossy3DHeart(ctx, colX + W - padX - 8 * st, topMargin + photoH + gapY * 0.5, 18 * st, "#f472b6");
+    }
   }
 
   ctx.restore();
@@ -1311,14 +1551,15 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
   ctx.save();
   const cx = colX + W / 2;
   const st = isStrip ? s * 0.72 : s;
-  const isNight = theme.id === "dokdo_unesco";
+  const isNight = theme.id === "dokdo_unesco" || theme.category === "halloween" || theme.isDark;
+  const isHalloween = theme.category === "halloween";
 
   // 1. 투박한 사각 박스 대신, 일러스트가 그대로 드러나면서 텍스트 가독성을 높여주는 부드러운 빛무리(미스트)
   const mistGrad = ctx.createLinearGradient(0, 1450 * s, 0, 1800 * s);
   if (isNight) {
     mistGrad.addColorStop(0, "rgba(15, 23, 42, 0)");
-    mistGrad.addColorStop(0.3, "rgba(15, 23, 42, 0.45)");
-    mistGrad.addColorStop(1, "rgba(15, 23, 42, 0.75)");
+    mistGrad.addColorStop(0.3, isHalloween ? "rgba(22, 10, 36, 0.55)" : "rgba(15, 23, 42, 0.45)");
+    mistGrad.addColorStop(1, isHalloween ? "rgba(20, 8, 32, 0.82)" : "rgba(15, 23, 42, 0.75)");
   } else {
     mistGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
     mistGrad.addColorStop(0.25, "rgba(255, 255, 255, 0.35)");
@@ -1331,8 +1572,16 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // 2. [Tag] 여고생 감성 미니 스티커 캡슐 태그
-  const badgeText = theme.category === "dokdo" ? "✦ 10.25 독도의 날 ✦" : "✦ 5.21 세계 문화 다양성의 날 ✦";
+  // 2. [Tag] 감성 미니 스티커 캡슐 태그
+  let badgeText = "✦ 10.31 HAPPY HALLOWEEN ✦";
+  if (theme.category === "dokdo") {
+    badgeText = "✦ 10.25 독도의 날 ✦";
+  } else if (theme.category === "diversity") {
+    badgeText = "✦ 5.21 세계 문화 다양성의 날 ✦";
+  } else if (theme.category === "halloween") {
+    badgeText = theme.dateBadgeText || "✦ 10.31 HAPPY HALLOWEEN ✦";
+  }
+
   ctx.font = `800 ${14.5 * st}px 'Pretendard', sans-serif`;
   const bw = ctx.measureText(badgeText).width + (isStrip ? 28 * st : 36 * st);
   const bh = (isStrip ? 24 : 28) * st;
@@ -1340,18 +1589,32 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
 
   // 글로시 캡슐 스티커 배경
   ctx.save();
-  ctx.shadowColor = isNight ? "rgba(0,0,0,0.5)" : "rgba(244, 114, 182, 0.35)";
-  ctx.shadowBlur = 10 * st;
-  ctx.shadowOffsetY = 3 * st;
+  if (isHalloween) {
+    ctx.shadowColor = "rgba(249, 115, 22, 0.45)";
+    ctx.shadowBlur = 10 * st;
+    ctx.shadowOffsetY = 3 * st;
+    ctx.fillStyle = theme.id === "halloween_magic" ? "rgba(38, 14, 66, 0.94)" : "rgba(42, 16, 10, 0.94)";
+    drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
+    ctx.fill();
 
-  ctx.fillStyle = isNight ? "rgba(30, 27, 75, 0.88)" : "rgba(255, 255, 255, 0.95)";
-  drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
-  ctx.fill();
+    ctx.strokeStyle = theme.border || "#f97316";
+    ctx.lineWidth = 1.8 * st;
+    drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
+    ctx.stroke();
+  } else {
+    ctx.shadowColor = isNight ? "rgba(0,0,0,0.5)" : "rgba(244, 114, 182, 0.35)";
+    ctx.shadowBlur = 10 * st;
+    ctx.shadowOffsetY = 3 * st;
 
-  ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
-  ctx.lineWidth = 1.8 * st;
-  drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
-  ctx.stroke();
+    ctx.fillStyle = isNight ? "rgba(30, 27, 75, 0.88)" : "rgba(255, 255, 255, 0.95)";
+    drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
+    ctx.fill();
+
+    ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
+    ctx.lineWidth = 1.8 * st;
+    drawRoundRect(ctx, cx - bw / 2, by, bw, bh, bh / 2);
+    ctx.stroke();
+  }
 
   // 캡슐 상단 윤광 하이라이트
   ctx.beginPath();
@@ -1360,7 +1623,7 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
   ctx.fill();
   ctx.restore();
 
-  ctx.fillStyle = isNight ? "#fef08a" : (theme.accentColor || "#e11d48");
+  ctx.fillStyle = isHalloween ? (theme.textColor || "#fed7aa") : (isNight ? "#fef08a" : (theme.accentColor || "#e11d48"));
   ctx.fillText(badgeText, cx, by + bh / 2 + 0.5 * st);
 
   // 3. [Title] 포토이즘/하루필름 스타일 감성 메인 레터링 타이틀
@@ -1374,19 +1637,24 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
   ctx.shadowBlur = 12 * st;
   ctx.lineJoin = "round";
   ctx.lineWidth = (isStrip ? 6 : 8) * st;
-  ctx.strokeStyle = isNight ? "rgba(15, 23, 42, 0.92)" : "#ffffff";
+  ctx.strokeStyle = theme.titleStroke || (isNight ? "rgba(15, 23, 42, 0.92)" : "#ffffff");
   ctx.strokeText(theme.titleText, cx, titleY);
 
   ctx.shadowBlur = 0;
-  ctx.fillStyle = isNight ? "#fef08a" : (theme.textColor || "#0f172a");
+  ctx.fillStyle = isNight ? (theme.textColor || "#fef08a") : (theme.textColor || "#0f172a");
   ctx.fillText(theme.titleText, cx, titleY);
   ctx.restore();
 
   // 타이틀 양옆 반짝이는 스파클 & 하트 포인트
   const titleHalfW = ctx.measureText(theme.titleText).width / 2;
   const starDist = titleHalfW + (isStrip ? 20 : 26) * st;
-  drawTwinkleStar(ctx, cx - starDist, titleY - 3 * st, (isStrip ? 10 : 13) * st, "#facc15");
-  drawTwinkleStar(ctx, cx + starDist, titleY - 3 * st, (isStrip ? 10 : 13) * st, "#f472b6");
+  if (isHalloween) {
+    drawTwinkleStar(ctx, cx - starDist, titleY - 3 * st, (isStrip ? 10 : 13) * st, "#f97316");
+    drawTwinkleStar(ctx, cx + starDist, titleY - 3 * st, (isStrip ? 10 : 13) * st, "#c084fc");
+  } else {
+    drawTwinkleStar(ctx, cx - starDist, titleY - 3 * st, (isStrip ? 10 : 13) * st, "#facc15");
+    drawTwinkleStar(ctx, cx + starDist, titleY - 3 * st, (isStrip ? 10 : 13) * st, "#f472b6");
+  }
 
   // 4. [Sub] 감성 인용구 슬로건
   const subY = (isStrip ? 1585 : 1598) * s;
@@ -1395,15 +1663,15 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
   ctx.lineWidth = 4 * st;
   ctx.strokeStyle = isNight ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.95)";
   ctx.strokeText(`“${theme.subText}”`, cx, subY);
-  ctx.fillStyle = isNight ? "#f5d0fe" : (theme.subTextColor || "#be185d");
+  ctx.fillStyle = isHalloween ? (theme.subTextColor || "#fdba74") : (isNight ? "#f5d0fe" : (theme.subTextColor || "#be185d"));
   ctx.fillText(`“${theme.subText}”`, cx, subY);
   ctx.restore();
 
-  // 5. [Divider] 러블리 도트 & 하트 포인트 라인
+  // 5. [Divider] 러블리 도트 & 하트/호박 포인트 라인
   const sepY = (isStrip ? 1622 : 1642) * s;
   const sepW = isStrip ? 260 * s : 480 * s;
   ctx.save();
-  ctx.strokeStyle = isNight ? "rgba(255, 255, 255, 0.25)" : "rgba(244, 114, 182, 0.35)";
+  ctx.strokeStyle = isHalloween ? "rgba(249, 115, 22, 0.4)" : (isNight ? "rgba(255, 255, 255, 0.25)" : "rgba(244, 114, 182, 0.35)");
   ctx.lineWidth = 1.5 * s;
   ctx.setLineDash([4 * s, 4 * s]);
   ctx.beginPath();
@@ -1412,15 +1680,27 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
   ctx.stroke();
   ctx.restore();
 
-  // 구분선 중앙 미니 입체 하트
-  drawGlossy3DHeart(ctx, cx, sepY, (isStrip ? 10 : 13) * st, theme.accentColor || "#ec4899");
+  // 구분선 중앙 미니 입체 하트 또는 호박
+  if (isHalloween) {
+    drawMiniPumpkinIcon(ctx, cx, sepY, (isStrip ? 10 : 13) * st);
+  } else {
+    drawGlossy3DHeart(ctx, cx, sepY, (isStrip ? 10 : 13) * st, theme.accentColor || "#ec4899");
+  }
 
-  // 6. [Club] 학교명 • 동아리 시그니처 (세련된 하이틴 브랜드 감성)
+  // 6. [Header / Brand] 시그니처 레터링 (⭐️ 할로윈 테마는 학교 정보 일체 배제!)
   const clubY = (isStrip ? 1664 : 1688) * s;
   const clubFontSize = Math.round((isStrip ? 18 : 25) * s);
   ctx.font = `800 ${clubFontSize}px 'Gowun Batang', 'Pretendard', serif`;
 
-  const clubHeader = `합천여자고등학교   ♡   ${theme.clubSub}`;
+  let clubHeader = "";
+  if (isHalloween || !theme.clubName) {
+    clubHeader = theme.id === "halloween_magic"
+      ? "TRICK OR TREAT   ✦   SPOOKY MAGIC NIGHT"
+      : "HAPPY HALLOWEEN   ✦   SPOOKY PUMPKIN PARTY";
+  } else {
+    clubHeader = `${theme.clubName}   ♡   ${theme.clubSub}`;
+  }
+
   ctx.save();
   ctx.lineWidth = 5 * st;
   ctx.strokeStyle = isNight ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.95)";
@@ -1431,7 +1711,10 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
 
   const headerHalfW = ctx.measureText(clubHeader).width / 2;
   const iconDist = headerHalfW + (isStrip ? 20 : 26) * st;
-  if (theme.category === "dokdo") {
+  if (isHalloween) {
+    drawMiniPumpkinIcon(ctx, cx - iconDist, clubY - 1 * st, (isStrip ? 12 : 15) * st);
+    drawMiniGhostIcon(ctx, cx + iconDist, clubY - 1 * st, (isStrip ? 11 : 14) * st);
+  } else if (theme.category === "dokdo") {
     drawMiniUnescoIcon(ctx, cx - iconDist, clubY - 1 * st, (isStrip ? 12 : 15) * st, isNight ? "#fef08a" : (theme.accentColor || "#e11d48"));
     drawMiniMugunghwaPin(ctx, cx + iconDist, clubY - 1 * st, (isStrip ? 11 : 14) * st);
   } else {
@@ -1469,7 +1752,7 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
     drawRoundRect(ctx, qrX, qrY, qrW, qrH, 8 * s);
     ctx.fill();
 
-    ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
+    ctx.strokeStyle = isNight ? (theme.border || "#c084fc") : (theme.border || "#f472b6");
     ctx.lineWidth = 1.6 * s;
     drawRoundRect(ctx, qrX, qrY, qrW, qrH, 8 * s);
     ctx.stroke();
@@ -1484,13 +1767,18 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
     ctx.font = `800 ${8.5 * s}px 'Pretendard', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = isNight ? "#1e1b4b" : (theme.accentColor || "#be185d");
+    ctx.fillStyle = isNight ? (theme.accentColor || "#1e1b4b") : (theme.accentColor || "#be185d");
     ctx.fillText("SCAN ME 📷", qrX + qrW / 2, qrY + 99 * s);
     ctx.restore();
 
-    // 좌측 균형용 진주 & 하트 데코
-    drawPearlCluster(ctx, colX + 80 * s, 1685 * s, 7 * s);
-    drawGlossy3DHeart(ctx, colX + 95 * s, 1685 * s, 16 * s, "#f472b6");
+    // 좌측 균형용 데코
+    if (isHalloween) {
+      drawMiniPumpkinIcon(ctx, colX + 80 * s, 1685 * s, 10 * s);
+      drawMiniGhostIcon(ctx, colX + 104 * s, 1685 * s, 9 * s);
+    } else {
+      drawPearlCluster(ctx, colX + 80 * s, 1685 * s, 7 * s);
+      drawGlossy3DHeart(ctx, colX + 95 * s, 1685 * s, 16 * s, "#f472b6");
+    }
   } else {
     // 스트립 2줄 모드: 각 줄마다 우측 하단에 미니 QR 스티커 탑재!
     const padX = 40 * s;
@@ -1508,7 +1796,7 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
     drawRoundRect(ctx, qrX, qrY, qrW, qrH, 6 * s);
     ctx.fill();
 
-    ctx.strokeStyle = isNight ? "#c084fc" : (theme.border || "#f472b6");
+    ctx.strokeStyle = isNight ? (theme.border || "#c084fc") : (theme.border || "#f472b6");
     ctx.lineWidth = 1.2 * s;
     drawRoundRect(ctx, qrX, qrY, qrW, qrH, 6 * s);
     ctx.stroke();
@@ -1523,7 +1811,7 @@ function drawBottomOrganizedInfo(ctx, theme, colX, W, H, dateStr, s, isStrip, qr
     ctx.font = `800 ${6.5 * s}px 'Pretendard', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = isNight ? "#1e1b4b" : (theme.accentColor || "#be185d");
+    ctx.fillStyle = isNight ? (theme.accentColor || "#1e1b4b") : (theme.accentColor || "#be185d");
     ctx.fillText("SCAN 📷", qrX + qrW / 2, qrY + 68 * s);
     ctx.restore();
   }
@@ -1864,6 +2152,96 @@ function drawMiniUnescoIcon(ctx, cx, cy, size, color) {
 
   // 바닥 받침
   ctx.fillRect(cx - size, cy + size * 0.55, size * 2, size * 0.16);
+  ctx.restore();
+}
+
+// 11. 귀여운 미니 잭오랜턴 호박 아이콘 🎃
+function drawMiniPumpkinIcon(ctx, cx, cy, r) {
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // 초록색 호박 꼭지
+  ctx.fillStyle = "#15803d";
+  ctx.fillRect(-r * 0.14, -r * 0.95, r * 0.28, r * 0.38);
+
+  // 오렌지 호박 몸통
+  ctx.fillStyle = "#ea580c";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.88, r * 0.76, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 호박 볼륨 음영
+  ctx.fillStyle = "#f97316";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.58, r * 0.74, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 노란색 촛불 눈 & 삼각 코 & 웃는 입
+  ctx.fillStyle = "#fef08a";
+  // 왼쪽 눈
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.42, -r * 0.15);
+  ctx.lineTo(-r * 0.22, -r * 0.35);
+  ctx.lineTo(-r * 0.22, -r * 0.05);
+  ctx.closePath();
+  ctx.fill();
+  // 오른쪽 눈
+  ctx.beginPath();
+  ctx.moveTo(r * 0.42, -r * 0.15);
+  ctx.lineTo(r * 0.22, -r * 0.35);
+  ctx.lineTo(r * 0.22, -r * 0.05);
+  ctx.closePath();
+  ctx.fill();
+  // 웃는 입 (지그재그)
+  ctx.beginPath();
+  ctx.arc(0, r * 0.12, r * 0.42, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.lineTo(0, r * 0.25);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// 12. 귀여운 꼬마 유령 아이콘 👻
+function drawMiniGhostIcon(ctx, cx, cy, r) {
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // 유령 하얀 몸통
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = "rgba(192, 132, 252, 0.45)";
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  ctx.arc(0, -r * 0.2, r * 0.65, Math.PI, 0, false);
+  ctx.lineTo(r * 0.65, r * 0.4);
+  // 물결 모양 치맛단
+  ctx.quadraticCurveTo(r * 0.42, r * 0.75, r * 0.22, r * 0.4);
+  ctx.quadraticCurveTo(0, r * 0.75, -r * 0.22, r * 0.4);
+  ctx.quadraticCurveTo(-r * 0.42, r * 0.75, -r * 0.65, r * 0.4);
+  ctx.closePath();
+  ctx.fill();
+
+  // 동그란 눈
+  ctx.shadowColor = "transparent";
+  ctx.fillStyle = "#1e1b4b";
+  ctx.beginPath();
+  ctx.arc(-r * 0.24, -r * 0.2, r * 0.11, 0, Math.PI * 2);
+  ctx.arc(r * 0.24, -r * 0.2, r * 0.11, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 발그레한 핑크 볼터치
+  ctx.fillStyle = "rgba(244, 114, 182, 0.65)";
+  ctx.beginPath();
+  ctx.arc(-r * 0.35, -r * 0.05, r * 0.1, 0, Math.PI * 2);
+  ctx.arc(r * 0.35, -r * 0.05, r * 0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 깜찍한 벌린 입
+  ctx.fillStyle = "#e11d48";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.09, r * 0.13, 0, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.restore();
 }
 
