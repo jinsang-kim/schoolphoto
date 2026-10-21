@@ -43,44 +43,68 @@
         <div class="mode-select-grid">
           <div class="mode-card active-pulse" id="card-mode-grid" onclick="selectModeAndStart('grid')">
             <div class="mode-preview-box grid-preview">
-              <div class="grid-row">
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
-              </div>
-              <div class="grid-row">
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
+              <div class="sheet-paper grid-sheet">
+                <!-- 2x2 사진 영역 -->
+                <div class="sheet-photos-grid">
+                  <div class="mini-photo-slot slot-1"><span class="mini-slot-num">1</span></div>
+                  <div class="mini-photo-slot slot-2"><span class="mini-slot-num">2</span></div>
+                  <div class="mini-photo-slot slot-3"><span class="mini-slot-num">3</span></div>
+                  <div class="mini-photo-slot slot-4"><span class="mini-slot-num">4</span></div>
+                  <div class="mini-ribbon-center">🎀</div>
+                </div>
+                <!-- 하단 감성 브랜딩 영역 -->
+                <div class="sheet-bottom-branding">
+                  <span class="sheet-tag-pill">✦ 청춘네컷 ✦</span>
+                  <span class="sheet-title-text">독도 • 문화다양성</span>
+                  <span class="sheet-sub-text">합천여고 ♡ 2026</span>
+                </div>
               </div>
             </div>
             <div class="mode-info">
-              <span class="mode-badge tablet-badge">✨ 엡손 포토프린터 추천</span>
+              <span class="mode-badge tablet-badge">✨ 4×6 포토 인화지 꽉 찬 규격</span>
               <h3>4×6인치 엽서형</h3>
-              <p class="size-spec">10×15 cm (102×152 mm)</p>
-              <p>2×2 와이드 4컷 꽉 찬 규격<br>(태블릿 & 엡손 인화지 최적화)</p>
+              <p class="size-spec">10×15 cm (2×2 와이드 4컷)</p>
+              <p>인화지 한 장 가득 시원하게 인쇄되는<br>감성 엽서형 포토 프레임</p>
             </div>
             <button class="mode-start-btn primary">선택하기 <i data-lucide="chevron-right"></i></button>
           </div>
 
           <div class="mode-card" id="card-mode-strip" onclick="selectModeAndStart('strip')">
             <div class="mode-preview-box strip-preview">
-              <div class="strip-col">
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
-              </div>
-              <div class="strip-col">
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
-                <div class="mini-cut"></div>
+              <div class="sheet-paper strip-sheet">
+                <!-- 좌측 스트립 (1줄) -->
+                <div class="mini-strip-col">
+                  <div class="mini-strip-cut slot-1"><span class="mini-slot-num">1</span></div>
+                  <div class="mini-strip-cut slot-2"><span class="mini-slot-num">2</span></div>
+                  <div class="mini-strip-cut slot-3"><span class="mini-slot-num">3</span></div>
+                  <div class="mini-strip-cut slot-4"><span class="mini-slot-num">4</span></div>
+                  <div class="mini-strip-bottom">
+                    <span class="mini-strip-title">청춘네컷</span>
+                    <span class="mini-strip-sub">합천여고</span>
+                  </div>
+                </div>
+                <!-- 중앙 절취선 (가위 아이콘) -->
+                <div class="mini-strip-divider">
+                  <span class="mini-cut-scissor">✂</span>
+                </div>
+                <!-- 우측 스트립 (1줄) -->
+                <div class="mini-strip-col">
+                  <div class="mini-strip-cut slot-1"><span class="mini-slot-num">1</span></div>
+                  <div class="mini-strip-cut slot-2"><span class="mini-slot-num">2</span></div>
+                  <div class="mini-strip-cut slot-3"><span class="mini-slot-num">3</span></div>
+                  <div class="mini-strip-cut slot-4"><span class="mini-slot-num">4</span></div>
+                  <div class="mini-strip-bottom">
+                    <span class="mini-strip-title">청춘네컷</span>
+                    <span class="mini-strip-sub">합천여고</span>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="mode-info">
-              <span class="mode-badge">클래식 4×6 2줄</span>
+              <span class="mode-badge">✂ 2줄 분할 인쇄 (친구와 공유)</span>
               <h3>4×6인치 스트립</h3>
-              <p class="size-spec">2×6인치 × 2개 (10×15 cm)</p>
-              <p>4×6 인화지 한 장에 2줄 출력<br>(친구와 반 잘라 나눠갖기)</p>
+              <p class="size-spec">2×6인치 × 2줄 (10×15 cm)</p>
+              <p>4×6 인화지 한 장에 2줄 동시 출력<br>가운데를 반 잘라 친구와 나눔</p>
             </div>
             <button class="mode-start-btn">선택하기 <i data-lucide="chevron-right"></i></button>
           </div>

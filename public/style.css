@@ -205,43 +205,202 @@ body {
 }
 
 .mode-preview-box {
-  background: white;
-  border-radius: 8px;
-  padding: 6px;
+  width: 114px;
+  height: 171px; /* 4×6인치 (10×15cm) 정확한 2:3 세로 인화지 비율 */
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 5px;
   display: flex;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.strip-preview {
-  width: 75px;
-  height: 105px;
-  gap: 4px;
+.mode-card:hover .mode-preview-box {
+  transform: scale(1.04);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
 }
 
-.strip-col {
+/* 4×6 실제 인쇄 인화지 시트 시뮬레이션 */
+.sheet-paper {
+  width: 100%;
+  height: 100%;
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(175deg, #e0f2fe 0%, #fdf2f8 40%, #fed7aa 75%, #fbcfe8 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 엽서형 (2×2 와이드 4컷 시트) */
+.grid-sheet {
+  padding: 4px 4px 3px 4px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sheet-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3.5px;
+  height: 122px;
+  position: relative;
+}
+
+.mini-photo-slot {
+  border-radius: 3.5px;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1.5px 3.5px rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 1.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mini-photo-slot.slot-1, .mini-strip-cut.slot-1 { background: linear-gradient(135deg, #fbcfe8 0%, #f472b6 100%); }
+.mini-photo-slot.slot-2, .mini-strip-cut.slot-2 { background: linear-gradient(135deg, #bae6fd 0%, #3b82f6 100%); }
+.mini-photo-slot.slot-3, .mini-strip-cut.slot-3 { background: linear-gradient(135deg, #fef08a 0%, #f59e0b 100%); }
+.mini-photo-slot.slot-4, .mini-strip-cut.slot-4 { background: linear-gradient(135deg, #ddd6fe 0%, #8b5cf6 100%); }
+
+.mini-slot-num {
+  font-size: 6px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  font-family: 'Pretendard', sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.mini-ribbon-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 13px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+}
+
+.sheet-bottom-branding {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding-top: 1px;
 }
 
-.grid-preview {
-  width: 105px;
-  height: 90px;
-  flex-direction: column;
-  gap: 4px;
+.sheet-tag-pill {
+  font-size: 6px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.92);
+  color: #be185d;
+  padding: 0.5px 5px;
+  border-radius: 999px;
+  border: 0.8px solid #f472b6;
+  line-height: 1.2;
 }
 
-.grid-row {
+.sheet-title-text {
+  font-size: 7.5px;
+  font-weight: 800;
+  color: #1e293b;
+  text-shadow: 0 1px 2px white;
+  margin-top: 0.5px;
+  line-height: 1.2;
+}
+
+.sheet-sub-text {
+  font-size: 5.5px;
+  font-weight: 700;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+/* 스트립 (4×1 2줄 분할 시트) */
+.strip-sheet {
+  padding: 4px 3px 2px 3px;
+  display: flex;
+  gap: 2px;
+  height: 100%;
+  position: relative;
+}
+
+.mini-strip-col {
   flex: 1;
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 2.5px;
+  height: 100%;
 }
 
-.mini-cut {
+.mini-strip-cut {
+  height: 27px;
+  border-radius: 2.5px;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 1.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mini-strip-divider {
+  width: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-left: 1px dashed rgba(236, 72, 153, 0.7);
+  height: 100%;
+}
+
+.mini-cut-scissor {
+  position: absolute;
+  top: 48%;
+  transform: translateY(-50%);
+  font-size: 8.5px;
+  line-height: 1;
+  color: #ec4899;
+  background: #ffffff;
+  border-radius: 50%;
+  padding: 1px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.mini-strip-bottom {
   flex: 1;
-  background: #cbd5e1;
-  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5px;
+  padding-top: 1px;
+}
+
+.mini-strip-title {
+  font-size: 6.5px;
+  font-weight: 800;
+  color: #1e293b;
+  text-shadow: 0 1px 2px white;
+  line-height: 1.2;
+}
+
+.mini-strip-sub {
+  font-size: 5px;
+  font-weight: 700;
+  color: #ec4899;
+  line-height: 1.2;
 }
 
 .mode-info {
