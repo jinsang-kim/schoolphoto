@@ -26,8 +26,12 @@
         <div class="glow-circle glow-2"></div>
       </div>
       
-      <!-- 상단 프린터 설정 버튼 -->
+      <!-- 상단 프린터 및 사운드 설정 버튼 -->
       <div class="home-top-bar">
+        <button class="sound-toggle-btn" id="sound-toggle-btn" onclick="toggleSound()" title="촬영 음성 및 효과음 켜기/끄기">
+          <i data-lucide="volume-2" id="sound-icon"></i>
+          <span id="sound-text">음성 ON</span>
+        </button>
         <button class="settings-trigger-btn" onclick="openSettingsModal()" title="프린터 및 시스템 설정">
           <i data-lucide="settings"></i>
           <span>프린터 설정</span>

@@ -15,7 +15,160 @@ const state = {
   currentQrImage: null,
   serverBaseUrl: null,
   serverLocalIp: null,
+  audioMuted: false,
 };
+
+// ====================================================
+// 🔊 오디오 및 음성 안내 엔진 (Web Audio API + SpeechSynthesis)
+// ====================================================
+let audioCtx = null;
+let shutterAudioBuffer = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
+
+// 사용자 첫 터치/클릭 시 오디오 컨텍스트 언락 및 셔터 사운드 프리로드
+async function initAudioSystem() {
+  const ctx = getAudioContext();
+  if (ctx && !shutterAudioBuffer) {
+    try {
+      const res = await fetch("/assets/audio/shutter.wav");
+      if (res.ok) {
+        const arrayBuf = await res.arrayBuffer();
+        shutterAudioBuffer = await ctx.decodeAudioData(arrayBuf);
+      }
+    } catch (e) {
+      console.warn("셔터 오디오 파일 로드 알림:", e.message);
+    }
+  }
+}
+window.addEventListener("click", initAudioSystem, { once: true });
+window.addEventListener("touchstart", initAudioSystem, { once: true });
+
+// 1. 한국어 자연스러운 음성 안내 (TTS - SpeechSynthesis)
+function speakVoice(text) {
+  if (state.audioMuted || !("speechSynthesis" in window)) return;
+  try {
+    window.speechSynthesis.cancel(); // 이전 음성 취소
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "ko-KR";
+    utter.rate = 1.05; // 살짝 경쾌하고 자연스러운 속도
+    utter.pitch = 1.15; // 친근하고 밝은 톤
+
+    // 한국어 음성 보이스 매칭
+    const voices = window.speechSynthesis.getVoices();
+    const koVoice = voices.find(v => v.lang === "ko-KR" || v.lang.startsWith("ko"));
+    if (koVoice) utter.voice = koVoice;
+
+    window.speechSynthesis.speak(utter);
+  } catch (e) {
+    console.warn("음성 합성 오류:", e.message);
+  }
+}
+
+// 2. 카운트다운 비프음 합성음 재생 (3, 2, 1)
+function playBeepSound(freq = 880, duration = 0.09) {
+  if (state.audioMuted) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch (e) {}
+}
+
+// 3. 사진 촬영 셔터음 ("찰칵!")
+function playShutterSound() {
+  if (state.audioMuted) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  // 1순위: 사전 생성된 실제 기계식 셔터 WAV 버퍼 재생
+  if (shutterAudioBuffer) {
+    try {
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.85;
+      source.buffer = shutterAudioBuffer;
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(0);
+      return;
+    } catch (e) {}
+  }
+
+  // 2순위 Fallback: Web Audio API 실시간 정밀 합성 (이중 기계식 찰칵 사운드)
+  try {
+    const t = ctx.currentTime;
+    // 클릭 1 (셔터 열림)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "triangle";
+    osc1.frequency.setValueAtTime(1400, t);
+    osc1.frequency.exponentialRampToValueAtTime(300, t + 0.05);
+    gain1.gain.setValueAtTime(0.7, t);
+    gain1.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(t);
+    osc1.stop(t + 0.05);
+
+    // 클릭 2 (셔터 닫힘 '착!')
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "triangle";
+    osc2.frequency.setValueAtTime(1800, t + 0.07);
+    osc2.frequency.exponentialRampToValueAtTime(180, t + 0.16);
+    gain2.gain.setValueAtTime(0.8, t + 0.07);
+    gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.16);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(t + 0.07);
+    osc2.stop(t + 0.16);
+  } catch (e) {}
+}
+
+// 음성 및 효과음 ON/OFF 토글
+function toggleSound() {
+  state.audioMuted = !state.audioMuted;
+  const btn = document.getElementById("sound-toggle-btn");
+  const icon = document.getElementById("sound-icon");
+  const text = document.getElementById("sound-text");
+
+  if (state.audioMuted) {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (btn) btn.classList.add("muted");
+    if (text) text.innerText = "음성 OFF";
+    if (icon) icon.setAttribute("data-lucide", "volume-x");
+    showToast("🔇 촬영 안내 음성 및 효과음이 꺼졌습니다.");
+  } else {
+    initAudioSystem();
+    if (btn) btn.classList.remove("muted");
+    if (text) text.innerText = "음성 ON";
+    if (icon) icon.setAttribute("data-lucide", "volume-2");
+    showToast("🔊 촬영 안내 음성 및 찰칵 효과음이 켜졌습니다.");
+    speakVoice("음성 안내가 켜졌습니다.");
+  }
+  if (window.lucide) lucide.createIcons();
+}
 
 // ⭐️ 고해상도 일러스트 배경 이미지 프리로드 캐시
 const THEME_IMAGES = {};
@@ -692,10 +845,13 @@ async function startCameraAndCountdown() {
       updateViewfinderSize();
     };
 
+    // 오디오 시스템 활성화
+    initAudioSystem();
+
     setTimeout(() => {
       updateViewfinderSize();
       runPhotoSequence(0);
-    }, 1500);
+    }, 1200);
   } catch (err) {
     console.error("카메라 접근 오류:", err);
     alert("카메라에 접근할 수 없습니다. 카메라 권한을 확인해주세요.");
@@ -719,6 +875,7 @@ function resetThumbnailSlots() {
 
 async function runPhotoSequence(cutIndex) {
   if (cutIndex >= 4) {
+    speakVoice("촬영이 모두 완료되었습니다! 사진을 만드는 중입니다.");
     stopCamera();
     await preparePhotoSessionAndRender();
     goToScreen("preview");
@@ -730,15 +887,40 @@ async function runPhotoSequence(cutIndex) {
     indicator.innerHTML = `<span class="active">${cutIndex + 1}</span> / 4`;
   }
 
+  const statusMsg = document.getElementById("camera-status-msg");
+
+  // 컷별 자연스러운 음성 안내
+  if (cutIndex === 0) {
+    if (statusMsg) statusMsg.innerText = "준비하세요! 첫 번째 사진을 찍습니다.";
+    speakVoice("준비하세요! 첫 번째 컷입니다.");
+    await sleep(1400);
+  } else if (cutIndex === 1) {
+    if (statusMsg) statusMsg.innerText = "두 번째 컷! 포즈를 바꿔보세요 ✨";
+    speakVoice("두 번째 컷, 다른 포즈를 취해보세요!");
+    await sleep(1300);
+  } else if (cutIndex === 2) {
+    if (statusMsg) statusMsg.innerText = "세 번째 컷! 환하게 웃어주세요 😊";
+    speakVoice("세 번째 컷, 환하게 웃어주세요!");
+    await sleep(1300);
+  } else if (cutIndex === 3) {
+    if (statusMsg) statusMsg.innerText = "마지막 컷! 가장 예쁜 표정으로 💖";
+    speakVoice("마지막 컷! 최고로 예쁜 표정 지어주세요!");
+    await sleep(1300);
+  }
+
   const countdownEl = document.getElementById("countdown-display");
   countdownEl.classList.remove("hidden");
 
+  // 3초 카운트다운 (3, 2, 1 카운트다운 비프음)
   for (let c = 3; c >= 1; c--) {
     countdownEl.innerText = c;
+    playBeepSound(c === 1 ? 1046 : 880, 0.1); // 마지막 1초는 하이톤
     await sleep(1000);
   }
   countdownEl.classList.add("hidden");
 
+  // 📸 사진 촬영 및 찰칵 셔터음 발생!
+  playShutterSound();
   triggerFlash();
   const capturedBlobUrl = captureCurrentFrame();
   state.capturedImages.push(capturedBlobUrl);
@@ -748,7 +930,9 @@ async function runPhotoSequence(cutIndex) {
     thumbSlot.innerHTML = `<img src="${capturedBlobUrl}" alt="Cut ${cutIndex + 1}">`;
   }
 
-  await sleep(1800);
+  if (statusMsg) statusMsg.innerText = "찰칵! 멋져요 👏";
+
+  await sleep(1600);
   runPhotoSequence(cutIndex + 1);
 }
 
