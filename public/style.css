@@ -43,7 +43,7 @@ body {
   width: 100%;
   height: 100%;
   height: 100dvh;
-  max-width: 1280px;
+  max-width: 1400px;
   position: relative;
   overflow: hidden;
   background: radial-gradient(circle at top right, #1e1b4b, #0f172a 60%);
@@ -65,8 +65,8 @@ body {
   pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s ease;
   transform: scale(0.98);
-  padding: clamp(10px, 2.5vh, 18px);
-  padding-bottom: max(clamp(10px, 2.5vh, 18px), env(safe-area-inset-bottom));
+  padding: clamp(8px, 2vh, 18px);
+  padding-bottom: max(clamp(8px, 2vh, 18px), env(safe-area-inset-bottom));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -520,11 +520,12 @@ body {
 
 .theme-split-layout {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: clamp(10px, 1.8vw, 18px);
   flex: 1;
   overflow: hidden;
-  padding-bottom: 80px; /* 고정 버튼 여백 */
+  padding-bottom: 74px; /* 하단 고정 액션바 여백 */
+  min-height: 0;
 }
 
 @media (max-width: 860px) {
@@ -533,6 +534,16 @@ body {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    padding-bottom: 80px;
+  }
+}
+
+/* 태블릿 세로 및 소형 태블릿 최적화 */
+@media (max-height: 750px) and (min-width: 861px) {
+  .theme-split-layout {
+    grid-template-columns: 280px 1fr;
+    gap: 12px;
+    padding-bottom: 68px;
   }
 }
 
@@ -541,7 +552,7 @@ body {
   background: rgba(15, 23, 42, 0.75);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -549,14 +560,18 @@ body {
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 24px rgba(0,0,0,0.35);
   height: 100%;
-  max-height: calc(100vh - 160px);
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 860px) {
   .live-frame-viewer-card {
     max-height: 280px;
+    height: 280px;
     width: 100%;
     margin-bottom: 8px;
+    flex-shrink: 0;
   }
 }
 
@@ -565,6 +580,7 @@ body {
   display: flex;
   justify-content: center;
   margin-bottom: 6px;
+  flex-shrink: 0;
 }
 
 .live-badge {
@@ -576,7 +592,7 @@ body {
   border: 1px solid rgba(59, 130, 246, 0.4);
   padding: 4px 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: clamp(10.5px, 1.8vw, 12px);
   font-weight: 700;
 }
 
@@ -587,12 +603,15 @@ body {
   justify-content: center;
   align-items: center;
   overflow: hidden;
+  min-height: 0;
 }
 
 #theme-live-preview-canvas {
   height: 100%;
   max-height: 100%;
   width: auto;
+  max-width: 100%;
+  object-fit: contain;
   border-radius: 6px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.6);
   border: 1px solid rgba(255,255,255,0.15);
@@ -626,6 +645,7 @@ body {
   overflow-y: auto;
   gap: 10px;
   padding-right: 4px;
+  min-height: 0;
 }
 
 .section-title-bar {
@@ -640,13 +660,14 @@ body {
 
 .theme-selection-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 8px;
 }
 
 @media (max-width: 1100px) {
   .theme-selection-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+    gap: 6px;
   }
 }
 
@@ -1106,37 +1127,53 @@ body {
 /* 4. 결과 미리보기 화면 */
 .preview-layout-container {
   display: flex;
-  gap: clamp(14px, 3vw, 24px);
+  gap: clamp(12px, 2.5vw, 24px);
   height: calc(100% - 50px);
   align-items: center;
   justify-content: center;
+  min-height: 0;
+  overflow: hidden;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 860px) {
   .preview-layout-container {
     flex-direction: column;
     height: auto;
     overflow-y: auto;
     padding-bottom: 24px;
+    align-items: stretch;
   }
 }
 
 .canvas-preview-wrapper {
+  flex: 1;
   height: 100%;
-  max-height: clamp(300px, 55vh, 480px);
+  max-height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.25);
   padding: 10px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 860px) {
+  .canvas-preview-wrapper {
+    height: 380px;
+    max-height: 50vh;
+    flex-shrink: 0;
+  }
 }
 
 #output-canvas {
   height: 100%;
   max-height: 100%;
   width: auto;
+  max-width: 100%;
+  object-fit: contain;
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
@@ -1144,9 +1181,12 @@ body {
 .preview-controls {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: 360px;
+  gap: 10px;
+  width: 380px;
   max-width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .result-notice {

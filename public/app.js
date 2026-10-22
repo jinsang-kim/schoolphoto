@@ -563,6 +563,8 @@ function goToScreen(screenName) {
 
   if (screenName === "theme") {
     renderLiveThemePreview();
+  } else if (screenName === "camera") {
+    setTimeout(() => updateViewfinderSize(), 60);
   }
 
   if (screenName !== "camera" && state.stream) {
