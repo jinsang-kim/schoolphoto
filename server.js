@@ -237,6 +237,35 @@ app.get("/download/:fileName", (req, res) => {
   const filePath = path.join(uploadDir, fileName);
   const exists = fs.existsSync(filePath) || memoryPhotos.has(fileName);
 
+  if (fs.existsSync(filePath)) {
+    try {
+      const stats = fs.statSync(filePath);
+      if (Date.now() - stats.mtimeMs > RETENTION_MS) {
+        fs.unlinkSync(filePath);
+        memoryPhotos.delete(fileName);
+        return res.status(410).send(`
+          <!DOCTYPE html>
+          <html lang="ko">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>보관 기간 만료</title>
+            <style>
+              body { font-family: sans-serif; text-align: center; padding: 40px 20px; background: #0f172a; color: white; }
+              .badge { display: inline-block; padding: 6px 14px; border-radius: 999px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); margin-bottom: 12px; font-weight: 700; }
+            </style>
+          </head>
+          <body>
+            <div class="badge">⏰ 유효기간 만료</div>
+            <h2>사진 보관 기간(7일)이 만료되었습니다 😢</h2>
+            <p>개인정보 및 사진 보호를 위해 7일이 지난 사진은 자동으로 영구 삭제됩니다.</p>
+          </body>
+          </html>
+        `);
+      }
+    } catch (e) {}
+  }
+
   if (!exists) {
     return res.status(404).send(`
       <!DOCTYPE html>

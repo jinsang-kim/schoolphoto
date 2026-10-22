@@ -841,8 +841,10 @@ window.addEventListener("orientationchange", () => {
 async function startCameraAndCountdown() {
   goToScreen("camera");
   state.capturedImages = [];
-  state.currentPhotoId = null;
+  // ⭐️ 매번 새로운 촬영 세션이 시작될 때마다 고유 ID 및 QR코드 완전 초기화 (새로운 고유 QR 발급)
+  state.currentPhotoId = generateUniquePhotoId();
   state.currentQrImage = null;
+  state.finalImageBase64 = null;
   resetThumbnailSlots();
   updateViewfinderSize();
 
@@ -956,6 +958,20 @@ async function runPhotoSequence(cutIndex) {
   runPhotoSequence(cutIndex + 1);
 }
 
+// ⭐️ 고유한 사진 세션 ID 생성 함수 (암호학적 랜덤 기반으로 매 촬영마다 절대 겹치지 않는 고유 파일명 & QR 보장)
+function generateUniquePhotoId() {
+  const timestamp = Date.now();
+  let rand = "";
+  if (window.crypto && window.crypto.getRandomValues) {
+    const bytes = new Uint8Array(5);
+    window.crypto.getRandomValues(bytes);
+    rand = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  } else {
+    rand = Math.random().toString(36).substring(2, 10);
+  }
+  return `photo_${timestamp}_${rand}.jpg`;
+}
+
 // ⭐️ 실제 인쇄물 하단에 인쇄될 다운로드 QR코드 생성 및 이미지 로딩 보장
 async function ensureQrImageReady() {
   if (state.currentQrImage && state.currentQrImage.complete && state.currentQrImage.naturalWidth > 0) {
@@ -963,7 +979,7 @@ async function ensureQrImageReady() {
   }
 
   if (!state.currentPhotoId) {
-    state.currentPhotoId = `photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
+    state.currentPhotoId = generateUniquePhotoId();
   }
 
   // QR 코드 다운로드 링크 결정 (모바일 브라우저에서 스캔 시 열릴 URL)
