@@ -55,25 +55,43 @@ async function initAudioSystem() {
 window.addEventListener("click", initAudioSystem, { once: true });
 window.addEventListener("touchstart", initAudioSystem, { once: true });
 
-// 1. 한국어 자연스러운 음성 안내 (TTS - SpeechSynthesis)
+// 1. 한국어 자연스러운 음성 안내 (TTS - SpeechSynthesis, 비동기 완료 대기 지원)
 function speakVoice(text) {
-  if (state.audioMuted || !("speechSynthesis" in window)) return;
-  try {
-    window.speechSynthesis.cancel(); // 이전 음성 취소
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "ko-KR";
-    utter.rate = 1.05; // 살짝 경쾌하고 자연스러운 속도
-    utter.pitch = 1.15; // 친근하고 밝은 톤
+  return new Promise((resolve) => {
+    if (state.audioMuted || !("speechSynthesis" in window)) {
+      return resolve();
+    }
+    try {
+      window.speechSynthesis.cancel(); // 이전 음성 취소
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "ko-KR";
+      utter.rate = 1.05; // 살짝 경쾌하고 자연스러운 속도
+      utter.pitch = 1.15; // 친근하고 밝은 톤
 
-    // 한국어 음성 보이스 매칭
-    const voices = window.speechSynthesis.getVoices();
-    const koVoice = voices.find(v => v.lang === "ko-KR" || v.lang.startsWith("ko"));
-    if (koVoice) utter.voice = koVoice;
+      // 한국어 음성 보이스 매칭
+      const voices = window.speechSynthesis.getVoices();
+      const koVoice = voices.find(v => v.lang === "ko-KR" || v.lang.startsWith("ko"));
+      if (koVoice) utter.voice = koVoice;
 
-    window.speechSynthesis.speak(utter);
-  } catch (e) {
-    console.warn("음성 합성 오류:", e.message);
-  }
+      let resolved = false;
+      const done = () => {
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
+      };
+
+      utter.onend = done;
+      utter.onerror = done;
+      // 브라우저에 따라 onend 이벤트가 지연/누락되는 경우 대비 fallback 타이머
+      setTimeout(done, 4000);
+
+      window.speechSynthesis.speak(utter);
+    } catch (e) {
+      console.warn("음성 합성 오류:", e.message);
+      resolve();
+    }
+  });
 }
 
 // 2. 카운트다운 비프음 합성음 재생 (3, 2, 1)
@@ -889,32 +907,34 @@ async function runPhotoSequence(cutIndex) {
 
   const statusMsg = document.getElementById("camera-status-msg");
 
-  // 컷별 자연스러운 음성 안내
+  // 컷별 자연스러운 음성 안내 (음성이 끝날 때까지 여유있게 대기하여 촬영 카운트다운과 겹치지 않음)
   if (cutIndex === 0) {
     if (statusMsg) statusMsg.innerText = "준비하세요! 첫 번째 사진을 찍습니다.";
-    speakVoice("준비하세요! 첫 번째 컷입니다.");
-    await sleep(1400);
+    await speakVoice("준비하세요! 첫 번째 컷입니다.");
+    await sleep(400); // 음성 종료 후 안정 대기
   } else if (cutIndex === 1) {
     if (statusMsg) statusMsg.innerText = "두 번째 컷! 포즈를 바꿔보세요 ✨";
-    speakVoice("두 번째 컷, 다른 포즈를 취해보세요!");
-    await sleep(1300);
+    await speakVoice("두 번째 컷, 다른 포즈를 취해보세요!");
+    await sleep(300);
   } else if (cutIndex === 2) {
     if (statusMsg) statusMsg.innerText = "세 번째 컷! 환하게 웃어주세요 😊";
-    speakVoice("세 번째 컷, 환하게 웃어주세요!");
-    await sleep(1300);
+    await speakVoice("세 번째 컷, 환하게 웃어주세요!");
+    await sleep(300);
   } else if (cutIndex === 3) {
     if (statusMsg) statusMsg.innerText = "마지막 컷! 가장 예쁜 표정으로 💖";
-    speakVoice("마지막 컷! 최고로 예쁜 표정 지어주세요!");
-    await sleep(1300);
+    await speakVoice("마지막 컷! 최고로 예쁜 표정 지어주세요!");
+    await sleep(300);
   }
 
   const countdownEl = document.getElementById("countdown-display");
   countdownEl.classList.remove("hidden");
 
-  // 3초 카운트다운 (3, 2, 1 카운트다운 비프음)
-  for (let c = 3; c >= 1; c--) {
+  // 첫 번째 컷은 준비 시간을 넉넉하게 5초, 이후 컷은 3초 카운트다운
+  const countdownStart = cutIndex === 0 ? 5 : 3;
+
+  for (let c = countdownStart; c >= 1; c--) {
     countdownEl.innerText = c;
-    playBeepSound(c === 1 ? 1046 : 880, 0.1); // 마지막 1초는 하이톤
+    playBeepSound(c === 1 ? 1046 : 880, 0.1); // 마지막 1초는 하이톤 알림
     await sleep(1000);
   }
   countdownEl.classList.add("hidden");
