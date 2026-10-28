@@ -75,31 +75,38 @@
 
           <div class="mode-card" id="card-mode-strip" onclick="selectModeAndStart('strip')">
             <div class="mode-preview-box strip-preview">
-              <div class="sheet-paper strip-sheet">
-                <!-- 좌측 스트립 (1줄) -->
-                <div class="mini-strip-col">
-                  <div class="mini-strip-cut slot-1"><span class="mini-slot-num">1</span></div>
-                  <div class="mini-strip-cut slot-2"><span class="mini-slot-num">2</span></div>
-                  <div class="mini-strip-cut slot-3"><span class="mini-slot-num">3</span></div>
-                  <div class="mini-strip-cut slot-4"><span class="mini-slot-num">4</span></div>
-                  <div class="mini-strip-bottom">
-                    <span class="mini-strip-title">청춘네컷</span>
-                    <span class="mini-strip-sub">합천여고</span>
+              <div class="strip-split-container">
+                <!-- 좌측 스트립 (왼쪽으로 살짝 회전 및 분리) -->
+                <div class="sheet-paper strip-piece strip-piece-left">
+                  <div class="mini-strip-col">
+                    <div class="mini-strip-cut slot-1"><span class="mini-slot-num">1</span></div>
+                    <div class="mini-strip-cut slot-2"><span class="mini-slot-num">2</span></div>
+                    <div class="mini-strip-cut slot-3"><span class="mini-slot-num">3</span></div>
+                    <div class="mini-strip-cut slot-4"><span class="mini-slot-num">4</span></div>
+                    <div class="mini-strip-bottom">
+                      <span class="mini-strip-title">청춘네컷</span>
+                      <span class="mini-strip-sub">My Pick 💕</span>
+                    </div>
                   </div>
                 </div>
-                <!-- 중앙 절취선 (가위 아이콘) -->
-                <div class="mini-strip-divider">
-                  <span class="mini-cut-scissor">✂</span>
+
+                <!-- 가운데 분할/절취선 & 가위 안내 표시 -->
+                <div class="split-cut-indicator">
+                  <span class="split-cut-scissor">✂</span>
+                  <span class="split-cut-text">절취</span>
                 </div>
-                <!-- 우측 스트립 (1줄) -->
-                <div class="mini-strip-col">
-                  <div class="mini-strip-cut slot-1"><span class="mini-slot-num">1</span></div>
-                  <div class="mini-strip-cut slot-2"><span class="mini-slot-num">2</span></div>
-                  <div class="mini-strip-cut slot-3"><span class="mini-slot-num">3</span></div>
-                  <div class="mini-strip-cut slot-4"><span class="mini-slot-num">4</span></div>
-                  <div class="mini-strip-bottom">
-                    <span class="mini-strip-title">청춘네컷</span>
-                    <span class="mini-strip-sub">합천여고</span>
+
+                <!-- 우측 스트립 (오른쪽으로 살짝 회전 및 분리) -->
+                <div class="sheet-paper strip-piece strip-piece-right">
+                  <div class="mini-strip-col">
+                    <div class="mini-strip-cut slot-1"><span class="mini-slot-num">1</span></div>
+                    <div class="mini-strip-cut slot-2"><span class="mini-slot-num">2</span></div>
+                    <div class="mini-strip-cut slot-3"><span class="mini-slot-num">3</span></div>
+                    <div class="mini-strip-cut slot-4"><span class="mini-slot-num">4</span></div>
+                    <div class="mini-strip-bottom">
+                      <span class="mini-strip-title">청춘네컷</span>
+                      <span class="mini-strip-sub">Friends 👭</span>
+                    </div>
                   </div>
                 </div>
               </div>
