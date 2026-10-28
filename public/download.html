@@ -190,18 +190,47 @@
     let targetPhotoSrc = '';
     let targetVideoSrc = '';
 
-    if (imgUrl) {
-      targetPhotoSrc = imgUrl;
-    } else if (file) {
-      targetPhotoSrc = '/uploads/' + file;
+    // 1. 사진 후보 URL 리스트 구성 (글로벌 CDN과 로컬/클라우드 서버 양방향 자동 Fallback)
+    const isLocalHost =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      /^10\.|^192\.168\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(window.location.hostname);
+
+    const photoCandidates = [];
+    if (isLocalHost) {
+      if (file) photoCandidates.push('/uploads/' + file);
+      if (imgUrl) photoCandidates.push(imgUrl);
+      if (file) photoCandidates.push('https://schoolphoto.vercel.app/uploads/' + file);
+    } else {
+      if (imgUrl) photoCandidates.push(imgUrl);
+      if (file) photoCandidates.push('/uploads/' + file);
+      if (file && !window.location.hostname.includes('vercel.app')) {
+        photoCandidates.push('https://schoolphoto.vercel.app/uploads/' + file);
+      }
     }
 
-    // 영상 소스 자동 탐지 (URL 파라미터 video 또는 파일명 기반 추론)
+    // 2. 영상 후보 URL 리스트 구성
+    const videoCandidates = [];
+    const baseName = file ? file.replace(/\.[^/.]+$/, '') : (video ? video.replace(/_video\.[^/.]+$/, '') : '');
     if (video) {
-      targetVideoSrc = video.startsWith('http') ? video : '/uploads/' + video;
-    } else if (file) {
-      const base = file.replace(/\.[^/.]+$/, '');
-      targetVideoSrc = '/uploads/' + base + '_video.webm';
+      if (video.startsWith('http')) {
+        videoCandidates.push(video);
+      } else {
+        videoCandidates.push('/uploads/' + video);
+        if (!window.location.hostname.includes('vercel.app')) {
+          videoCandidates.push('https://schoolphoto.vercel.app/uploads/' + video);
+        }
+      }
+    }
+    if (baseName) {
+      const webmLocal = '/uploads/' + baseName + '_video.webm';
+      const mp4Local = '/uploads/' + baseName + '_video.mp4';
+      if (!videoCandidates.includes(webmLocal)) videoCandidates.push(webmLocal);
+      if (!videoCandidates.includes(mp4Local)) videoCandidates.push(mp4Local);
+      if (!window.location.hostname.includes('vercel.app')) {
+        videoCandidates.push('https://schoolphoto.vercel.app/uploads/' + baseName + '_video.webm');
+        videoCandidates.push('https://schoolphoto.vercel.app/uploads/' + baseName + '_video.mp4');
+      }
     }
 
     function switchTab(tab) {
@@ -225,93 +254,151 @@
       }
     }
 
-    // 사진 로드 시도 및 Fallback 처리
+    // 원클릭 파일 강제 다운로드 헬퍼 (Cross-Origin CDN 이미지 및 비디오 모두 파일로 즉시 저장)
+    async function triggerFileDownload(e, srcUrl, defaultName, fileParam) {
+      e.preventDefault();
+      if (!srcUrl) return;
+
+      const btn = e.currentTarget;
+      const origHtml = btn.innerHTML;
+      btn.innerHTML = '⏳ 기기에 저장 중...';
+
+      try {
+        // 1순위: 서버 다운로드 프록시(/api/proxy-download)가 가능한 경우 Content-Disposition: attachment로 즉시 다운로드
+        const proxyParams = new URLSearchParams();
+        if (fileParam) proxyParams.set('file', fileParam);
+        if (srcUrl.startsWith('http')) proxyParams.set('url', srcUrl);
+        proxyParams.set('name', defaultName);
+
+        const proxyUrl = '/api/proxy-download?' + proxyParams.toString();
+        const headCheck = await fetch(proxyUrl, { method: 'HEAD' }).catch(() => null);
+        if (headCheck && headCheck.ok) {
+          const a = document.createElement('a');
+          a.href = proxyUrl;
+          a.download = defaultName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => { btn.innerHTML = origHtml; }, 900);
+          return;
+        }
+
+        // 2순위: 브라우저 Fetch -> Blob 변환 후 ObjectURL 다운로드
+        const res = await fetch(srcUrl, { mode: 'cors' });
+        if (res.ok) {
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = defaultName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+          btn.innerHTML = origHtml;
+          return;
+        }
+      } catch (err) {
+        console.warn('Blob 다운로드 전환:', err);
+      }
+
+      // 3순위: 기본 링크 열기
+      btn.innerHTML = origHtml;
+      window.open(srcUrl, '_blank');
+    }
+
+    // 사진 로드 시도 및 다중 Fallback 처리
     let photoLoadFailed = false;
     let videoLoadFailed = false;
 
     function checkOverallState() {
       if (photoLoadFailed && videoLoadFailed) {
         loadingMsg.style.display = 'block';
-        loadingMsg.innerHTML = '사진을 찾을 수 없습니다 😢<br><span style="font-size:12px;color:#64748b;margin-top:6px;display:block;">보관 기간(7일)이 만료되었거나 동일한 Wi-Fi(네트워크) 접속이 필요할 수 있습니다.</span>';
+        loadingMsg.innerHTML = '사진을 찾을 수 없습니다 😢<br><span style="font-size:12px;color:#64748b;margin-top:6px;display:block;">보관 기간(7일)이 만료되었거나 존재하지 않는 링크입니다.</span>';
       }
     }
 
-    if (targetPhotoSrc) {
-      photoImg.src = targetPhotoSrc;
+    function tryLoadPhotoCandidate(index) {
+      if (index >= photoCandidates.length) {
+        photoLoadFailed = true;
+        photoImg.style.display = 'none';
+        checkVideoAvailability(0);
+        checkOverallState();
+        return;
+      }
+
+      const candidate = photoCandidates[index];
       photoImg.onload = () => {
+        targetPhotoSrc = candidate;
         loadingMsg.style.display = 'none';
         photoImg.style.display = 'block';
         actionBox.style.display = 'flex';
-        dlBtn.href = targetPhotoSrc;
-        checkVideoAvailability();
+        const downloadFileName = file || `life4cut_${Date.now()}.jpg`;
+        dlBtn.href = candidate;
+        dlBtn.download = downloadFileName;
+        dlBtn.onclick = (e) => triggerFileDownload(e, targetPhotoSrc, downloadFileName, file);
+        checkVideoAvailability(0);
       };
       photoImg.onerror = () => {
-        // Vercel에서 직접 열었으나 파일이 로컬 서버에만 있는 경우: fallback 호스트 시도
-        if (targetPhotoSrc.startsWith('/uploads/') && window.location.hostname.includes('vercel.app')) {
-          console.log('Vercel uploads 404, fallback notice');
-        }
-        photoLoadFailed = true;
-        photoImg.style.display = 'none';
-        checkVideoAvailability();
-        checkOverallState();
+        console.warn('사진 후보 로드 실패, 다음 후보 시도:', candidate);
+        tryLoadPhotoCandidate(index + 1);
       };
+      photoImg.src = candidate;
+    }
+
+    if (photoCandidates.length > 0) {
+      tryLoadPhotoCandidate(0);
     } else {
       photoLoadFailed = true;
-      checkVideoAvailability();
+      checkVideoAvailability(0);
       checkOverallState();
     }
 
-    // 영상 가용 여부 확인
-    function checkVideoAvailability() {
-      if (!targetVideoSrc) {
+    // 영상 가용 여부 다중 후보 확인
+    function checkVideoAvailability(vIndex) {
+      if (vIndex >= videoCandidates.length) {
         videoLoadFailed = true;
         checkOverallState();
         return;
       }
-      const testVid = document.createElement('video');
-      testVid.src = targetVideoSrc;
-      testVid.onloadedmetadata = () => {
-        // 영상이 실제로 존재할 경우 탭 UI 활성화
-        tabNav.style.display = 'flex';
-        videoPlayer.src = targetVideoSrc;
-        dlVideoBtn.href = targetVideoSrc;
-        const ext = targetVideoSrc.endsWith('.mp4') ? 'mp4' : 'webm';
-        dlVideoBtn.download = `life4cut_video_${Date.now()}.${ext}`;
 
-        // 만약 사진이 없는데 영상만 있는 경우 영상 탭으로 자동 전환
+      const candidateVid = videoCandidates[vIndex];
+      const testVid = document.createElement('video');
+      testVid.preload = 'metadata';
+      testVid.muted = true;
+      testVid.playsInline = true;
+
+      let handled = false;
+      const onSuccess = () => {
+        if (handled) return;
+        handled = true;
+        targetVideoSrc = candidateVid;
+        tabNav.style.display = 'flex';
+        videoPlayer.src = candidateVid;
+        const ext = candidateVid.endsWith('.mp4') ? 'mp4' : 'webm';
+        const vidDownloadName = video || `life4cut_video_${Date.now()}.${ext}`;
+        dlVideoBtn.href = candidateVid;
+        dlVideoBtn.download = vidDownloadName;
+        dlVideoBtn.onclick = (e) => triggerFileDownload(e, targetVideoSrc, vidDownloadName, vidDownloadName);
+
         if (photoLoadFailed) {
           loadingMsg.style.display = 'none';
           actionBox.style.display = 'flex';
           switchTab('video');
         }
       };
-      testVid.onerror = () => {
-        // mp4 fallback 확인
-        if (targetVideoSrc.endsWith('.webm')) {
-          const mp4Src = targetVideoSrc.replace('.webm', '.mp4');
-          const testMp4 = document.createElement('video');
-          testMp4.src = mp4Src;
-          testMp4.onloadedmetadata = () => {
-            targetVideoSrc = mp4Src;
-            tabNav.style.display = 'flex';
-            videoPlayer.src = mp4Src;
-            dlVideoBtn.href = mp4Src;
-            dlVideoBtn.download = `life4cut_video_${Date.now()}.mp4`;
-            if (photoLoadFailed) {
-              loadingMsg.style.display = 'none';
-              actionBox.style.display = 'flex';
-              switchTab('video');
-            }
-          };
-          testMp4.onerror = () => {
-            videoLoadFailed = true;
-            checkOverallState();
-          };
-        } else {
-          videoLoadFailed = true;
-          checkOverallState();
-        }
+
+      const onFail = () => {
+        if (handled) return;
+        handled = true;
+        checkVideoAvailability(vIndex + 1);
       };
+
+      testVid.onloadedmetadata = onSuccess;
+      testVid.onloadeddata = onSuccess;
+      testVid.oncanplay = onSuccess;
+      testVid.onerror = onFail;
+      testVid.src = candidateVid;
     }
   </script>
 </body>

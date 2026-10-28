@@ -3,9 +3,14 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const https = require("https");
+const http = require("http");
 const QRCode = require("qrcode");
 const { exec } = require("child_process");
 require("dotenv").config();
+
+// 학교 방화벽 SSL 인증서 검사(SELF_SIGNED_CERT_IN_CHAIN) 우회용 HTTPS 에이전트
+const insecureHttpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 const app = express();
 app.set("trust proxy", true);
@@ -145,7 +150,8 @@ let currentPrinterName = process.env.PRINTER_NAME || "EPSON L15150 Series";
 
 // 1. 기본 설정 정보 조회
 app.get("/api/config", (req, res) => {
-  const host = req.get("host") || `${localIp}:${PORT}`;
+  const rawHost = req.get("host") || `${localIp}:${PORT}`;
+  const host = (rawHost.includes("localhost") || rawHost.includes("127.0.0.1")) ? `${localIp}:${PORT}` : rawHost;
   const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const baseUrl = `${protocol}://${host}`;
 
@@ -367,55 +373,249 @@ app.get("/download/:fileName", (req, res) => {
   `);
 });
 
-// 무료 클라우드 이미지 CDN 업로드 함수 (Vercel 서버리스 및 모바일 LTE 다운로드 지원 - 7일 자동 만료 적용)
+// HTTPS POST 헬퍼 (학교 방화벽 자체서명 SSL 인증서 환경 및 Vercel 모두 호환)
+function httpsPostUrlEncoded(targetUrl, paramsObj, timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    try {
+      const parsed = new URL(targetUrl);
+      const bodyStr = new URLSearchParams(paramsObj).toString();
+      const req = https.request(
+        {
+          hostname: parsed.hostname,
+          port: parsed.port || 443,
+          path: parsed.pathname + parsed.search,
+          method: "POST",
+          agent: insecureHttpsAgent,
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Length": Buffer.byteLength(bodyStr),
+            "User-Agent": "SchoolPhotoBooth/2.0",
+          },
+          timeout: timeoutMs,
+        },
+        (res) => {
+          let raw = "";
+          res.on("data", (chunk) => (raw += chunk));
+          res.on("end", () => {
+            try {
+              resolve(JSON.parse(raw));
+            } catch (e) {
+              reject(new Error(`JSON 파싱 오류 (HTTP ${res.statusCode})`));
+            }
+          });
+        }
+      );
+      req.on("timeout", () => {
+        req.destroy(new Error("요청 타임아웃"));
+      });
+      req.on("error", reject);
+      req.write(bodyStr);
+      req.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+// HTTPS JSON POST 헬퍼 (로컬 PC -> Vercel 클라우드 백그라운드 미러링용)
+function httpsPostJson(targetUrl, payloadObj, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    try {
+      const parsed = new URL(targetUrl);
+      const bodyStr = JSON.stringify(payloadObj);
+      const req = https.request(
+        {
+          hostname: parsed.hostname,
+          port: parsed.port || 443,
+          path: parsed.pathname + parsed.search,
+          method: "POST",
+          agent: insecureHttpsAgent,
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(bodyStr),
+            "User-Agent": "SchoolPhotoBooth/2.0",
+          },
+          timeout: timeoutMs,
+        },
+        (res) => {
+          let raw = "";
+          res.on("data", (chunk) => (raw += chunk));
+          res.on("end", () => {
+            try {
+              resolve({ status: res.statusCode, data: JSON.parse(raw) });
+            } catch (e) {
+              resolve({ status: res.statusCode, data: null });
+            }
+          });
+        }
+      );
+      req.on("timeout", () => req.destroy(new Error("JSON POST 타임아웃")));
+      req.on("error", reject);
+      req.write(bodyStr);
+      req.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+// 무료 클라우드 이미지 CDN 업로드 함수 (Vercel 서버리스 및 모바일 LTE 다운로드 지원 - 학교 방화벽 SSL 완벽 호환)
 async function uploadToCloudCDN(base64Data) {
-  // 1. ImgBB 업로드 시도 (expiration=604800 설정으로 7일 후 CDN 서버에서 자동 영구 삭제)
+  // 1순위: FreeImage.host (iili.io 글로벌 CDN - 학교 방화벽 및 모바일 통신사 100% 통과)
   try {
-    const params = new URLSearchParams();
-    params.append("image", base64Data);
-    params.append("expiration", String(RETENTION_SECONDS)); // 7일 (604,800초)
-    const res = await fetch("https://api.imgbb.com/1/upload?key=41dc94f09d8d6dc3e3a9c69d80d2105a", {
-      method: "POST",
-      body: params,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    });
-    const json = await res.json();
-    if (json.data && json.data.url) {
+    const json = await httpsPostUrlEncoded(
+      "https://freeimage.host/api/1/upload",
+      {
+        key: "6d207e02198a847aa98d0a2a901485a5",
+        action: "upload",
+        source: base64Data,
+        format: "json",
+      },
+      7500
+    );
+    if (json && json.image && json.image.url) {
+      console.log("[CLOUD CDN] FreeImage(iili.io) 업로드 성공:", json.image.url);
+      return json.image.url;
+    }
+  } catch (e1) {
+    console.warn("FreeImage 업로드 알림:", e1.message);
+  }
+
+  // 2순위: ImgBB 업로드 시도 (expiration=604800 설정으로 7일 후 CDN 서버에서 자동 영구 삭제)
+  try {
+    const json = await httpsPostUrlEncoded(
+      "https://api.imgbb.com/1/upload?key=41dc94f09d8d6dc3e3a9c69d80d2105a",
+      {
+        image: base64Data,
+        expiration: String(RETENTION_SECONDS),
+      },
+      6500
+    );
+    if (json && json.data && json.data.url) {
       console.log("[CLOUD CDN] ImgBB 업로드 성공 (유효기간: 7일):", json.data.url);
       return json.data.url;
     }
-  } catch (e1) {
-    console.warn("ImgBB 업로드 알림:", e1.message);
-  }
-
-  // 2. FreeImage.host 업로드 시도
-  try {
-    const params = new URLSearchParams();
-    params.append("key", "6d207e02198a847aa98d0a2a901485a5");
-    params.append("action", "upload");
-    params.append("source", base64Data);
-    params.append("format", "json");
-    const res = await fetch("https://freeimage.host/api/1/upload", {
-      method: "POST",
-      body: params,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    });
-    const json = await res.json();
-    if (json.image && json.image.url) {
-      console.log("[CLOUD CDN] FreeImage 업로드 성공:", json.image.url);
-      return json.image.url;
-    }
   } catch (e2) {
-    console.warn("FreeImage 업로드 알림:", e2.message);
+    console.warn("ImgBB 업로드 알림:", e2.message);
   }
 
   return null;
 }
 
+// 모바일 원클릭 강제 파일 다운로드 프록시 API (Cross-Origin 이미지 및 로컬 파일 모두 attachment로 즉시 다운로드)
+app.get("/api/proxy-download", (req, res) => {
+  const { file, url, name } = req.query;
+  const downloadName = (name && /^[a-zA-Z0-9_.-]+$/.test(name)) ? name : (file || `life4cut_${Date.now()}.jpg`);
+
+  // 1. 로컬/메모리 파일 먼저 확인
+  if (file) {
+    const safeFile = path.basename(file);
+    const filePath = path.join(uploadDir, safeFile);
+    const isVideo = safeFile.endsWith(".webm") || safeFile.endsWith(".mp4");
+    const contentType = isVideo ? (safeFile.endsWith(".mp4") ? "video/mp4" : "video/webm") : "image/jpeg";
+
+    if (fs.existsSync(filePath)) {
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Disposition", `attachment; filename="${downloadName}"`);
+      return res.sendFile(filePath);
+    }
+    if (memoryPhotos.has(safeFile)) {
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Disposition", `attachment; filename="${downloadName}"`);
+      return res.send(memoryPhotos.get(safeFile));
+    }
+  }
+
+  // 2. 클라우드 CDN URL 프록시 다운로드
+  if (url && /^https?:\/\//i.test(url)) {
+    try {
+      const parsed = new URL(url);
+      const client = parsed.protocol === "https:" ? https : http;
+      const options = {
+        hostname: parsed.hostname,
+        port: parsed.port || (parsed.protocol === "https:" ? 443 : 80),
+        path: parsed.pathname + parsed.search,
+        method: "GET",
+        agent: parsed.protocol === "https:" ? insecureHttpsAgent : undefined,
+        headers: { "User-Agent": "SchoolPhotoBooth/2.0" },
+        timeout: 10000,
+      };
+      const proxyReq = client.request(options, (proxyRes) => {
+        if (proxyRes.statusCode && proxyRes.statusCode >= 200 && proxyRes.statusCode < 300) {
+          res.setHeader("Content-Type", proxyRes.headers["content-type"] || "image/jpeg");
+          res.setHeader("Content-Disposition", `attachment; filename="${downloadName}"`);
+          proxyRes.pipe(res);
+        } else {
+          res.status(404).send("원격 파일을 다운로드할 수 없습니다.");
+        }
+      });
+      proxyReq.on("error", () => {
+        if (!res.headersSent) res.status(500).send("다운로드 프록시 오류");
+      });
+      proxyReq.end();
+      return;
+    } catch (e) {
+      return res.status(400).send("유효하지 않은 다운로드 URL입니다.");
+    }
+  }
+
+  res.status(404).send("다운로드할 파일을 찾을 수 없습니다.");
+});
+
+// 촬영 영상 단독 업로드 백업 API (대용량 영상 분할 업로드 지원)
+app.post("/api/upload-video", async (req, res) => {
+  try {
+    const { fileName, videoBase64, fromLocalSync } = req.body;
+    if (!fileName || !videoBase64 || typeof videoBase64 !== "string") {
+      return res.status(400).json({ error: "필수 파라미터가 누락되었습니다." });
+    }
+    const safeCustomName = /^[a-zA-Z0-9_-]+\.jpg$/.test(fileName) ? fileName : `photo_${Date.now()}.jpg`;
+    const vidMatches = videoBase64.match(/^data:video\/([a-zA-Z0-9]+);base64,/);
+    const vidExt = vidMatches ? (vidMatches[1] === "webm" ? "webm" : "mp4") : "webm";
+    const cleanVidBase64 = videoBase64.replace(/^data:video\/[a-zA-Z0-9]+;base64,/, "").replace(/^data:[^;]+;base64,/, "");
+    const vidBuffer = Buffer.from(cleanVidBase64, "base64");
+
+    const baseNameWithoutExt = safeCustomName.replace(/\.[^/.]+$/, "");
+    const videoFileName = `${baseNameWithoutExt}_video.${vidExt}`;
+    const vidFilePath = path.join(uploadDir, videoFileName);
+
+    try {
+      fs.writeFileSync(vidFilePath, vidBuffer);
+    } catch (fsErr) {}
+    memoryPhotos.set(videoFileName, vidBuffer);
+
+    // 로컬 서버에서 업로드된 경우 Vercel 서버에도 백그라운드 동기화 (4MB 이하인 경우)
+    if (!process.env.VERCEL && !fromLocalSync && videoBase64.length < 3800000) {
+      httpsPostJson("https://schoolphoto.vercel.app/api/upload-video", {
+        fileName: safeCustomName,
+        videoBase64,
+        fromLocalSync: true,
+      }).catch(() => {});
+    }
+
+    return res.json({
+      success: true,
+      videoFileName,
+      videoUrl: `/uploads/${videoFileName}`,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // 3. 사진 및 영상 저장 처리 API (QR 코드 생성 & 인쇄)
 app.post("/api/complete", async (req, res) => {
   try {
-    const { imageBase64, videoBase64, printCount = 1, frameTheme = "classic", printerName: reqPrinterName } = req.body;
+    const {
+      imageBase64,
+      videoBase64,
+      printCount = 1,
+      frameTheme = "classic",
+      printerName: reqPrinterName,
+      cloudUrl: existingCloudUrl,
+      skipCloudUpload = false,
+      fromLocalSync = false,
+    } = req.body;
     const printerName = reqPrinterName || currentPrinterName || process.env.PRINTER_NAME || "EPSON L15150 Series";
 
     if (!imageBase64) {
@@ -438,50 +638,78 @@ app.post("/api/complete", async (req, res) => {
     const photoUrl = `/uploads/${fileName}`;
 
     // 🎥 촬영 영상(타임랩스/비디오) 저장 처리
+    const baseNameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
     let videoFileName = null;
     let videoUrl = null;
     if (videoBase64 && typeof videoBase64 === "string" && videoBase64.length > 50) {
       try {
         const vidMatches = videoBase64.match(/^data:video\/([a-zA-Z0-9]+);base64,/);
         const vidExt = vidMatches ? (vidMatches[1] === "webm" ? "webm" : "mp4") : "webm";
-        const cleanVidBase64 = videoBase64.replace(/^data:video\/\w+;base64,/, "");
+        const cleanVidBase64 = videoBase64.replace(/^data:video\/[a-zA-Z0-9]+;base64,/, "").replace(/^data:[^;]+;base64,/, "");
         const vidBuffer = Buffer.from(cleanVidBase64, "base64");
-        
-        const baseNameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+
         videoFileName = `${baseNameWithoutExt}_video.${vidExt}`;
         const vidFilePath = path.join(uploadDir, videoFileName);
 
-        fs.writeFileSync(vidFilePath, vidBuffer);
+        try {
+          fs.writeFileSync(vidFilePath, vidBuffer);
+        } catch (vFsErr) {}
         memoryPhotos.set(videoFileName, vidBuffer);
         videoUrl = `/uploads/${videoFileName}`;
         console.log(`[VIDEO SAVED] 촬영 영상 저장 완료: ${videoFileName} (${Math.round(vidBuffer.length / 1024)} KB)`);
       } catch (vidErr) {
         console.warn("촬영 영상 저장 오류:", vidErr.message);
       }
+    } else {
+      // 이전 프리뷰 동기화 단계에서 이미 저장된 영상이 있는지 확인
+      for (const ext of ["webm", "mp4"]) {
+        const candidateVid = `${baseNameWithoutExt}_video.${ext}`;
+        if (memoryPhotos.has(candidateVid) || fs.existsSync(path.join(uploadDir, candidateVid))) {
+          videoFileName = candidateVid;
+          videoUrl = `/uploads/${candidateVid}`;
+          break;
+        }
+      }
     }
 
-    // 스마트폰 스캔용 다운로드 URL (스마트폰이 LTE/5G 어디서든 받을 수 있도록 글로벌 CDN 우선 적용)
+    // 스마트폰 스캔용 다운로드 URL (스마트폰이 LTE/5G 어디서든 받을 수 있도록 글로벌 CDN + 파일명 이중 보장)
     const reqHost = req.get("host") || `${localIp}:${PORT}`;
     const protocol = req.headers["x-forwarded-proto"] || req.protocol || (req.secure ? "https" : "http");
     const actualHost = (reqHost.includes("localhost") || reqHost.includes("127.0.0.1")) ? `${localIp}:${PORT}` : reqHost;
-    
-    let downloadUrl = `${protocol}://${actualHost}/download.html?file=${fileName}`;
-    if (videoFileName) {
-      downloadUrl += `&video=${videoFileName}`;
+
+    let cloudUrl = existingCloudUrl || null;
+    if (!cloudUrl && !skipCloudUpload) {
+      try {
+        cloudUrl = await uploadToCloudCDN(base64Data);
+      } catch (cdnErr) {
+        console.warn("클라우드 CDN 연동 알림 (로컬 URL 사용):", cdnErr.message);
+      }
     }
 
-    // ⭐️ 로컬 / Vercel 상관없이 클라우드 CDN 업로드 우선 시도 (스마트폰 LTE/5G에서도 즉시 다운로드 가능)
-    try {
-      const cloudUrl = await uploadToCloudCDN(base64Data);
-      if (cloudUrl) {
-        let vParam = videoFileName ? `&video=${videoFileName}` : "";
-        downloadUrl = `https://schoolphoto.vercel.app/download.html?img=${encodeURIComponent(cloudUrl)}${vParam}`;
-        console.log(`[QR CODE URL] 글로벌 다운로드 링크 생성 완료: ${downloadUrl}`);
-      } else {
-        console.log(`[QR CODE URL] 로컬 네트워크 다운로드 링크 사용: ${downloadUrl}`);
-      }
-    } catch (cdnErr) {
-      console.warn("클라우드 CDN 연동 알림 (로컬 URL 사용):", cdnErr.message);
+    const vParam = videoFileName ? `&video=${encodeURIComponent(videoFileName)}` : "";
+    let downloadUrl = "";
+    if (cloudUrl) {
+      downloadUrl = `https://schoolphoto.vercel.app/download.html?file=${encodeURIComponent(fileName)}&img=${encodeURIComponent(cloudUrl)}${vParam}`;
+      console.log(`[QR CODE URL] 글로벌 CDN + 로컬 하이브리드 다운로드 링크 생성 완료: ${downloadUrl}`);
+    } else {
+      downloadUrl = `${protocol}://${actualHost}/download.html?file=${encodeURIComponent(fileName)}${vParam}`;
+      console.log(`[QR CODE URL] 로컬 네트워크 다운로드 링크 사용: ${downloadUrl}`);
+    }
+
+    // 로컬 PC에서 실행 중일 때 Vercel 클라우드 서버에도 사진/영상을 백그라운드로 미러링 (모바일 LTE/5G에서 영상까지 100% 재생 보장)
+    if (!process.env.VERCEL && !actualHost.includes("vercel.app") && !fromLocalSync) {
+      const canIncludeVid = videoBase64 && videoBase64.length < 2800000;
+      httpsPostJson("https://schoolphoto.vercel.app/api/complete", {
+        imageBase64,
+        videoBase64: canIncludeVid ? videoBase64 : null,
+        fileName,
+        cloudUrl,
+        printCount: 0,
+        skipCloudUpload: true,
+        fromLocalSync: true,
+      }).catch((syncErr) => {
+        console.warn("Vercel 클라우드 미러링 알림:", syncErr.message);
+      });
     }
 
     // QR 코드 이미지(Data URL) 생성
@@ -524,6 +752,7 @@ app.post("/api/complete", async (req, res) => {
       success: true,
       fileName,
       photoUrl,
+      cloudUrl,
       videoFileName,
       videoUrl,
       downloadUrl,

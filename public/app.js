@@ -13,9 +13,13 @@ const state = {
   resetTimerInterval: null,
   currentPhotoId: null,
   currentQrImage: null,
+  cloudUrl: null,
+  lastUploadedDownloadUrl: null,
+  lastQrDataUrl: null,
   recordedVideoBlob: null,
   recordedVideoBase64: null,
   mediaRecorder: null,
+  recCanvasTimer: null,
   recordedChunks: [],
   serverBaseUrl: null,
   serverLocalIp: null,
@@ -715,9 +719,11 @@ async function changePhotoSize(newMode) {
 
   showToast(newMode === "grid" ? "📐 4×6인치 엽서형(2×2)으로 변경되었습니다." : "📐 4×6인치 스트립(2줄)으로 변경되었습니다.");
 
-  // 촬영된 사진이 있으면 실시간 재합성
+  // 촬영된 사진이 있으면 실시간 재합성 및 서버/클라우드 동기화
   if (state.capturedImages && state.capturedImages.length > 0) {
+    state.cloudUrl = null;
     await renderLife4CutCanvas();
+    syncPhotoAndVideoToServer(0, true).catch(() => {});
   }
 }
 
@@ -841,7 +847,7 @@ window.addEventListener("orientationchange", () => {
   }, 200);
 });
 
-// 🎥 촬영 시간 전체 동영상 녹화 제어 (MediaRecorder)
+// 🎥 촬영 시간 전체 동영상 녹화 제어 (경량 미러링+필터 캔버스 스트림 기반으로 Vercel 4.5MB 제한 완벽 통과)
 function startVideoRecording() {
   if (!state.stream || typeof MediaRecorder === "undefined") {
     console.warn("MediaRecorder를 지원하지 않거나 스트림이 없습니다.");
@@ -851,18 +857,71 @@ function startVideoRecording() {
     state.recordedChunks = [];
     state.recordedVideoBlob = null;
     state.recordedVideoBase64 = null;
-
-    let mimeType = "video/webm;codecs=vp8";
-    if (MediaRecorder.isTypeSupported("video/mp4")) {
-      mimeType = "video/mp4";
-    } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
-      mimeType = "video/webm;codecs=vp9";
-    } else if (MediaRecorder.isTypeSupported("video/webm")) {
-      mimeType = "video/webm";
+    if (state.recCanvasTimer) {
+      clearInterval(state.recCanvasTimer);
+      state.recCanvasTimer = null;
     }
 
-    const options = mimeType ? { mimeType, videoBitsPerSecond: 1500000 } : {};
-    state.mediaRecorder = new MediaRecorder(state.stream, options);
+    const video = document.getElementById("webcam");
+    let recordStream = state.stream;
+
+    // 거울 반전 + 감성 필터가 적용된 경량 캔버스(360x480급, 15fps)로 녹화하여 용량을 ~500KB로 최적화
+    try {
+      const recCanvas = document.createElement("canvas");
+      const isGrid = state.layoutMode === "grid";
+      recCanvas.width = isGrid ? 360 : 480;
+      recCanvas.height = isGrid ? 466 : 314;
+      const recCtx = recCanvas.getContext("2d");
+
+      const drawRecFrame = () => {
+        if (!video || video.readyState < 2) return;
+        const Vw = video.videoWidth || 1280;
+        const Vh = video.videoHeight || 720;
+        const targetRatio = recCanvas.width / recCanvas.height;
+        let cw = Vw, ch = Vh, cx = 0, cy = 0;
+        if (Vw / Vh > targetRatio) {
+          cw = Vh * targetRatio;
+          cx = (Vw - cw) / 2;
+        } else {
+          ch = Vw / targetRatio;
+          cy = (Vh - ch) / 2;
+        }
+        recCtx.save();
+        recCtx.translate(recCanvas.width, 0);
+        recCtx.scale(-1, 1);
+        const filterCss = FILTER_CONFIG[state.selectedFilter]?.css;
+        if (filterCss && filterCss !== "none") {
+          recCtx.filter = filterCss;
+        }
+        recCtx.drawImage(video, cx, cy, cw, ch, 0, 0, recCanvas.width, recCanvas.height);
+        recCtx.restore();
+      };
+
+      drawRecFrame();
+      state.recCanvasTimer = setInterval(drawRecFrame, 66); // ~15fps
+      if (typeof recCanvas.captureStream === "function") {
+        recordStream = recCanvas.captureStream(15);
+      }
+    } catch (canvasErr) {
+      console.warn("경량 캔버스 스트림 생성 알림 (원본 스트림 사용):", canvasErr);
+    }
+
+    let mimeType = "";
+    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+      mimeType = "video/webm;codecs=vp9";
+    } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
+      mimeType = "video/webm;codecs=vp8";
+    } else if (MediaRecorder.isTypeSupported("video/webm")) {
+      mimeType = "video/webm";
+    } else if (MediaRecorder.isTypeSupported("video/mp4")) {
+      mimeType = "video/mp4";
+    }
+
+    // 180kbps 비트레이트로 25~28초 촬영 시 약 450~600KB 생성 (Vercel 서버리스 완벽 호환)
+    const options = mimeType
+      ? { mimeType, videoBitsPerSecond: 180000 }
+      : { videoBitsPerSecond: 180000 };
+    state.mediaRecorder = new MediaRecorder(recordStream, options);
 
     state.mediaRecorder.ondataavailable = (e) => {
       if (e.data && e.data.size > 0) {
@@ -871,6 +930,10 @@ function startVideoRecording() {
     };
 
     state.mediaRecorder.onstop = async () => {
+      if (state.recCanvasTimer) {
+        clearInterval(state.recCanvasTimer);
+        state.recCanvasTimer = null;
+      }
       try {
         const finalType = state.mediaRecorder.mimeType || "video/webm";
         state.recordedVideoBlob = new Blob(state.recordedChunks, { type: finalType });
@@ -884,7 +947,7 @@ function startVideoRecording() {
     };
 
     state.mediaRecorder.start(1000); // 1초 단위 청크
-    console.log("[VIDEO RECORDING] 촬영 영상 녹화 시작");
+    console.log("[VIDEO RECORDING] 촬영 영상 녹화 시작 (최적화 모드)");
   } catch (err) {
     console.warn("녹화 시작 오류:", err);
   }
@@ -892,6 +955,10 @@ function startVideoRecording() {
 
 function stopVideoRecording() {
   return new Promise((resolve) => {
+    if (state.recCanvasTimer) {
+      clearInterval(state.recCanvasTimer);
+      state.recCanvasTimer = null;
+    }
     if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
       const origOnStop = state.mediaRecorder.onstop;
       state.mediaRecorder.onstop = async (e) => {
@@ -921,6 +988,9 @@ async function startCameraAndCountdown() {
   // ⭐️ 매번 새로운 촬영 세션이 시작될 때마다 고유 ID 및 QR코드 완전 초기화 (새로운 고유 QR 발급)
   state.currentPhotoId = generateUniquePhotoId();
   state.currentQrImage = null;
+  state.cloudUrl = null;
+  state.lastUploadedDownloadUrl = null;
+  state.lastQrDataUrl = null;
   state.finalImageBase64 = null;
   state.recordedVideoBlob = null;
   state.recordedVideoBase64 = null;
@@ -1128,10 +1198,121 @@ async function ensureQrImageReady() {
   return state.currentQrImage;
 }
 
-// ⭐️ 실제 인쇄물 하단에 인쇄될 다운로드 QR코드 사전 생성 및 캔버스 합성
+// ⭐️ 서버 및 글로벌 클라우드 CDN에 사진·영상을 즉시 업로드하고 인화물 QR코드까지 완벽 동기화
+async function syncPhotoAndVideoToServer(printCount = 0, reRenderQrOnCanvas = false) {
+  if (!state.finalImageBase64) return null;
+
+  // 비디오 Base64가 아직 변환 중일 경우 대기
+  if (state.recordedVideoBlob && !state.recordedVideoBase64) {
+    try {
+      state.recordedVideoBase64 = await blobToBase64(state.recordedVideoBlob);
+    } catch (e) {}
+  }
+
+  // Vercel 서버리스(4.5MB 제한) 보호: 비디오 Base64가 2.6MB 이하일 때만 단일 요청에 포함, 초과 시 분할 업로드
+  const vidStr = state.recordedVideoBase64 || null;
+  const includeVidInline = vidStr && vidStr.length < 2600000;
+
+  let res = await fetch("/api/complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      imageBase64: state.finalImageBase64,
+      videoBase64: includeVidInline ? vidStr : null,
+      fileName: state.currentPhotoId,
+      cloudUrl: state.cloudUrl || null,
+      printCount,
+      frameTheme: state.selectedTheme,
+      layoutMode: state.layoutMode,
+      printerName: state.printerName,
+    }),
+  });
+
+  // 혹시라도 413(Payload Too Large) 또는 오류 발생 시 비디오를 분리하여 사진 업로드를 100% 보장
+  if (!res.ok && includeVidInline) {
+    console.warn(`[UPLOAD RETRY] 복합 업로드 응답(${res.status}), 사진 단독 업로드로 즉시 재시도합니다.`);
+    res = await fetch("/api/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageBase64: state.finalImageBase64,
+        videoBase64: null,
+        fileName: state.currentPhotoId,
+        cloudUrl: state.cloudUrl || null,
+        printCount,
+        frameTheme: state.selectedTheme,
+        layoutMode: state.layoutMode,
+        printerName: state.printerName,
+      }),
+    });
+  }
+
+  // 비디오가 인라인에서 제외되었거나 재시도된 경우 별도 엔드포인트(/api/upload-video)로 전송
+  if (vidStr && (!includeVidInline || !res.ok) && vidStr.length < 3800000) {
+    fetch("/api/upload-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName: state.currentPhotoId,
+        videoBase64: vidStr,
+      }),
+    }).catch(() => {});
+  }
+
+  if (!res.ok) return null;
+  const data = await res.json();
+
+  if (data.cloudUrl) state.cloudUrl = data.cloudUrl;
+  if (data.downloadUrl) state.lastUploadedDownloadUrl = data.downloadUrl;
+  if (data.qrCodeDataUrl) state.lastQrDataUrl = data.qrCodeDataUrl;
+
+  // 서버가 반환한 정식 QR 코드(글로벌 클라우드 CDN + 로컬 파일 하이브리드 URL)를 인화 캔버스에도 즉시 반영
+  if (reRenderQrOnCanvas && data.qrCodeDataUrl) {
+    try {
+      const updatedQrImg = await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = data.qrCodeDataUrl;
+      });
+      if (updatedQrImg) {
+        state.currentQrImage = updatedQrImg;
+        await renderLife4CutCanvas();
+        // QR코드가 갱신된 최종 인화본을 서버 디스크(/uploads/)에도 조용히 덮어쓰기 (클라우드 재업로드 생략)
+        fetch("/api/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageBase64: state.finalImageBase64,
+            videoBase64: null,
+            fileName: state.currentPhotoId,
+            cloudUrl: state.cloudUrl,
+            skipCloudUpload: true,
+            printCount: 0,
+            frameTheme: state.selectedTheme,
+            layoutMode: state.layoutMode,
+            printerName: state.printerName,
+          }),
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn("인화물 QR 재합성 알림:", e);
+    }
+  }
+
+  return data;
+}
+
+// ⭐️ 실제 인쇄물 하단에 인쇄될 다운로드 QR코드 사전 생성 및 캔버스 합성 + 서버/클라우드 즉시 업로드
 async function preparePhotoSessionAndRender() {
   await ensureQrImageReady();
   await renderLife4CutCanvas();
+  // 4컷 촬영 직후 프리뷰 화면 진입 시점에 이미 서버 및 클라우드 CDN 업로드를 완료하여 어떤 QR을 찍어도 100% 다운로드 보장
+  try {
+    await syncPhotoAndVideoToServer(0, true);
+  } catch (err) {
+    console.warn("프리뷰 단계 사전 업로드 알림:", err);
+  }
 }
 
 function triggerFlash() {
@@ -3151,9 +3332,16 @@ function retakePhotos() {
   state.capturedImages = [];
   state.currentPhotoId = null;
   state.currentQrImage = null;
+  state.cloudUrl = null;
+  state.lastUploadedDownloadUrl = null;
+  state.lastQrDataUrl = null;
   state.finalImageBase64 = null;
   state.recordedVideoBlob = null;
   state.recordedVideoBase64 = null;
+  if (state.recCanvasTimer) {
+    clearInterval(state.recCanvasTimer);
+    state.recCanvasTimer = null;
+  }
   if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
     try { state.mediaRecorder.stop(); } catch (e) {}
   }
@@ -3168,7 +3356,6 @@ function setPrintQty(qty, element) {
 }
 
 // 최종 전송 및 QR 생성
-// 최종 전송 및 QR 생성
 async function submitFinal() {
   const submitBtn = document.getElementById("submit-complete-btn");
 
@@ -3176,37 +3363,14 @@ async function submitFinal() {
   submitBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> 처리 중입니다...`;
 
   try {
-    let qrUrl = "";
+    let qrUrl = state.lastQrDataUrl || "";
     let isServerOk = false;
 
     try {
-      // 비디오 Base64가 아직 준비 중일 경우 최대 1.5초 대기
-      if (state.recordedVideoBlob && !state.recordedVideoBase64) {
-        try {
-          state.recordedVideoBase64 = await blobToBase64(state.recordedVideoBlob);
-        } catch (e) {}
-      }
-
-      const res = await fetch("/api/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: state.finalImageBase64,
-          videoBase64: state.recordedVideoBase64 || null,
-          fileName: state.currentPhotoId,
-          printCount: state.printQuantity,
-          frameTheme: state.selectedTheme,
-          layoutMode: state.layoutMode,
-          printerName: state.printerName,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.qrCodeDataUrl) {
-          qrUrl = data.qrCodeDataUrl;
-          isServerOk = true;
-        }
+      const data = await syncPhotoAndVideoToServer(state.printQuantity, false);
+      if (data && data.qrCodeDataUrl) {
+        qrUrl = data.qrCodeDataUrl;
+        isServerOk = true;
       }
     } catch (netErr) {
       console.warn("서버 API 연결 불가 (웹 앱 단독 실행 또는 네트워크 환경):", netErr);
@@ -3221,7 +3385,9 @@ async function submitFinal() {
           const baseName = state.currentPhotoId.replace(/\.[^/.]+$/, "");
           const videoParam = `&video=${baseName}_video.webm`;
           let fallbackTarget = "";
-          if (state.serverBaseUrl) {
+          if (state.lastUploadedDownloadUrl) {
+            fallbackTarget = state.lastUploadedDownloadUrl;
+          } else if (state.serverBaseUrl) {
             fallbackTarget = `${state.serverBaseUrl}/download.html?file=${state.currentPhotoId}${videoParam}`;
           } else if ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && state.serverLocalIp) {
             fallbackTarget = `http://${state.serverLocalIp}:3000/download.html?file=${state.currentPhotoId}${videoParam}`;
@@ -3261,9 +3427,9 @@ async function submitFinal() {
 
     const statusMsg = document.getElementById("finish-status-msg");
     if (isServerOk && state.printQuantity > 0) {
-      statusMsg.innerText = `포토 프린터(${state.printerName})에서 ${state.printQuantity}장이 인쇄되고 있습니다. 🖨️\n스마트폰으로 QR코드를 스캔하여 저장하세요!`;
+      statusMsg.innerText = `포토 프린터(${state.printerName})에서 ${state.printQuantity}장이 인쇄되고 있습니다. 🖨️\n스마트폰으로 QR코드를 스캔하여 사진과 촬영 영상을 저장하세요!`;
     } else {
-      statusMsg.innerText = "스마트폰으로 QR을 스캔하거나 아래 링크로 저장하세요! 📱";
+      statusMsg.innerText = "스마트폰으로 QR을 스캔하여 사진과 촬영 영상을 저장하세요! 📱";
     }
 
     startAutoResetTimer(20);
@@ -3307,9 +3473,16 @@ function resetToHome() {
   state.capturedImages = [];
   state.currentPhotoId = null;
   state.currentQrImage = null;
+  state.cloudUrl = null;
+  state.lastUploadedDownloadUrl = null;
+  state.lastQrDataUrl = null;
   state.finalImageBase64 = null;
   state.recordedVideoBlob = null;
   state.recordedVideoBase64 = null;
+  if (state.recCanvasTimer) {
+    clearInterval(state.recCanvasTimer);
+    state.recCanvasTimer = null;
+  }
   if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
     try { state.mediaRecorder.stop(); } catch (e) {}
   }
