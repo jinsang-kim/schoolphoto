@@ -13,6 +13,10 @@ const state = {
   resetTimerInterval: null,
   currentPhotoId: null,
   currentQrImage: null,
+  recordedVideoBlob: null,
+  recordedVideoBase64: null,
+  mediaRecorder: null,
+  recordedChunks: [],
   serverBaseUrl: null,
   serverLocalIp: null,
   audioMuted: false,
@@ -837,6 +841,79 @@ window.addEventListener("orientationchange", () => {
   }, 200);
 });
 
+// 🎥 촬영 시간 전체 동영상 녹화 제어 (MediaRecorder)
+function startVideoRecording() {
+  if (!state.stream || typeof MediaRecorder === "undefined") {
+    console.warn("MediaRecorder를 지원하지 않거나 스트림이 없습니다.");
+    return;
+  }
+  try {
+    state.recordedChunks = [];
+    state.recordedVideoBlob = null;
+    state.recordedVideoBase64 = null;
+
+    let mimeType = "video/webm;codecs=vp8";
+    if (MediaRecorder.isTypeSupported("video/mp4")) {
+      mimeType = "video/mp4";
+    } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+      mimeType = "video/webm;codecs=vp9";
+    } else if (MediaRecorder.isTypeSupported("video/webm")) {
+      mimeType = "video/webm";
+    }
+
+    const options = mimeType ? { mimeType, videoBitsPerSecond: 1500000 } : {};
+    state.mediaRecorder = new MediaRecorder(state.stream, options);
+
+    state.mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        state.recordedChunks.push(e.data);
+      }
+    };
+
+    state.mediaRecorder.onstop = async () => {
+      try {
+        const finalType = state.mediaRecorder.mimeType || "video/webm";
+        state.recordedVideoBlob = new Blob(state.recordedChunks, { type: finalType });
+        console.log(`[VIDEO RECORDED] 영상 녹화 완료: ${Math.round(state.recordedVideoBlob.size / 1024)} KB, 타입: ${finalType}`);
+
+        // Blob을 Base64로 비동기 변환
+        state.recordedVideoBase64 = await blobToBase64(state.recordedVideoBlob);
+      } catch (err) {
+        console.warn("영상 Blob 처리 오류:", err);
+      }
+    };
+
+    state.mediaRecorder.start(1000); // 1초 단위 청크
+    console.log("[VIDEO RECORDING] 촬영 영상 녹화 시작");
+  } catch (err) {
+    console.warn("녹화 시작 오류:", err);
+  }
+}
+
+function stopVideoRecording() {
+  return new Promise((resolve) => {
+    if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+      const origOnStop = state.mediaRecorder.onstop;
+      state.mediaRecorder.onstop = async (e) => {
+        if (origOnStop) await origOnStop(e);
+        resolve();
+      };
+      state.mediaRecorder.stop();
+    } else {
+      resolve();
+    }
+  });
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 // 카메라 및 촬영 시퀀스
 async function startCameraAndCountdown() {
   goToScreen("camera");
@@ -845,6 +922,8 @@ async function startCameraAndCountdown() {
   state.currentPhotoId = generateUniquePhotoId();
   state.currentQrImage = null;
   state.finalImageBase64 = null;
+  state.recordedVideoBlob = null;
+  state.recordedVideoBase64 = null;
   resetThumbnailSlots();
   updateViewfinderSize();
 
@@ -867,6 +946,9 @@ async function startCameraAndCountdown() {
 
     // 오디오 시스템 활성화
     initAudioSystem();
+
+    // 🎥 첫 번째 컷 직전 동영상 녹화 시작
+    startVideoRecording();
 
     setTimeout(() => {
       updateViewfinderSize();
@@ -896,6 +978,8 @@ function resetThumbnailSlots() {
 async function runPhotoSequence(cutIndex) {
   if (cutIndex >= 4) {
     speakVoice("촬영이 모두 완료되었습니다! 사진을 만드는 중입니다.");
+    // 🎥 4컷 촬영이 모두 끝나면 녹화 중지
+    await stopVideoRecording();
     stopCamera();
     await preparePhotoSessionAndRender();
     goToScreen("preview");
@@ -984,12 +1068,15 @@ async function ensureQrImageReady() {
 
   // QR 코드 다운로드 링크 결정 (모바일 브라우저에서 스캔 시 열릴 URL)
   let downloadUrl = "";
+  const baseName = state.currentPhotoId.replace(/\.[^/.]+$/, "");
+  const videoParam = `&video=${baseName}_video.webm`;
+
   if (state.serverBaseUrl) {
-    downloadUrl = `${state.serverBaseUrl}/download.html?file=${state.currentPhotoId}`;
+    downloadUrl = `${state.serverBaseUrl}/download.html?file=${state.currentPhotoId}${videoParam}`;
   } else if ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && state.serverLocalIp) {
-    downloadUrl = `http://${state.serverLocalIp}:3000/download.html?file=${state.currentPhotoId}`;
+    downloadUrl = `http://${state.serverLocalIp}:3000/download.html?file=${state.currentPhotoId}${videoParam}`;
   } else {
-    downloadUrl = `${window.location.origin}/download.html?file=${state.currentPhotoId}`;
+    downloadUrl = `${window.location.origin}/download.html?file=${state.currentPhotoId}${videoParam}`;
   }
 
   let qrDataUrl = null;
@@ -3065,6 +3152,11 @@ function retakePhotos() {
   state.currentPhotoId = null;
   state.currentQrImage = null;
   state.finalImageBase64 = null;
+  state.recordedVideoBlob = null;
+  state.recordedVideoBase64 = null;
+  if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+    try { state.mediaRecorder.stop(); } catch (e) {}
+  }
   goToScreen("theme");
 }
 
@@ -3088,11 +3180,19 @@ async function submitFinal() {
     let isServerOk = false;
 
     try {
+      // 비디오 Base64가 아직 준비 중일 경우 최대 1.5초 대기
+      if (state.recordedVideoBlob && !state.recordedVideoBase64) {
+        try {
+          state.recordedVideoBase64 = await blobToBase64(state.recordedVideoBlob);
+        } catch (e) {}
+      }
+
       const res = await fetch("/api/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           imageBase64: state.finalImageBase64,
+          videoBase64: state.recordedVideoBase64 || null,
           fileName: state.currentPhotoId,
           printCount: state.printQuantity,
           frameTheme: state.selectedTheme,
@@ -3118,13 +3218,15 @@ async function submitFinal() {
         qrUrl = state.currentQrImage.src;
       } else if (typeof QRCode !== "undefined" && QRCode.toDataURL) {
         try {
+          const baseName = state.currentPhotoId.replace(/\.[^/.]+$/, "");
+          const videoParam = `&video=${baseName}_video.webm`;
           let fallbackTarget = "";
           if (state.serverBaseUrl) {
-            fallbackTarget = `${state.serverBaseUrl}/download.html?file=${state.currentPhotoId}`;
+            fallbackTarget = `${state.serverBaseUrl}/download.html?file=${state.currentPhotoId}${videoParam}`;
           } else if ((window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && state.serverLocalIp) {
-            fallbackTarget = `http://${state.serverLocalIp}:3000/download.html?file=${state.currentPhotoId}`;
+            fallbackTarget = `http://${state.serverLocalIp}:3000/download.html?file=${state.currentPhotoId}${videoParam}`;
           } else {
-            fallbackTarget = `${window.location.origin}/download.html?file=${state.currentPhotoId}`;
+            fallbackTarget = `${window.location.origin}/download.html?file=${state.currentPhotoId}${videoParam}`;
           }
           qrUrl = await QRCode.toDataURL(fallbackTarget, {
             errorCorrectionLevel: "M",
@@ -3206,6 +3308,11 @@ function resetToHome() {
   state.currentPhotoId = null;
   state.currentQrImage = null;
   state.finalImageBase64 = null;
+  state.recordedVideoBlob = null;
+  state.recordedVideoBase64 = null;
+  if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+    try { state.mediaRecorder.stop(); } catch (e) {}
+  }
   goToScreen("home");
 }
 

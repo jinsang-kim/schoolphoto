@@ -13,8 +13,8 @@ const PORT = process.env.PORT || 3000;
 
 // 미들웨어
 app.use(cors());
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(express.json({ limit: "150mb" }));
+app.use(express.urlencoded({ limit: "150mb", extended: true }));
 
 // 업로드 및 사진 캐시 저장소 (로컬 지속성 및 7일 유효기간 관리)
 const RETENTION_DAYS = 7;
@@ -77,22 +77,31 @@ app.get("/uploads/:fileName", (req, res) => {
   const fileName = req.params.fileName;
   const filePath = path.join(uploadDir, fileName);
 
+  const isVideo = fileName.endsWith(".webm") || fileName.endsWith(".mp4");
+
   if (fs.existsSync(filePath)) {
     try {
       const stats = fs.statSync(filePath);
       if (Date.now() - stats.mtimeMs > RETENTION_MS) {
         fs.unlinkSync(filePath);
         memoryPhotos.delete(fileName);
-        return res.status(410).send("사진 보관 유효기간(7일)이 만료되었습니다.");
+        return res.status(410).send("보관 유효기간(7일)이 만료되었습니다.");
       }
     } catch (e) {}
+    if (isVideo) {
+      res.setHeader("Content-Type", fileName.endsWith(".mp4") ? "video/mp4" : "video/webm");
+    }
     return res.sendFile(filePath);
   }
   if (memoryPhotos.has(fileName)) {
-    res.setHeader("Content-Type", "image/jpeg");
+    if (isVideo) {
+      res.setHeader("Content-Type", fileName.endsWith(".mp4") ? "video/mp4" : "video/webm");
+    } else {
+      res.setHeader("Content-Type", "image/jpeg");
+    }
     return res.send(memoryPhotos.get(fileName));
   }
-  res.status(404).send("사진을 찾을 수 없습니다.");
+  res.status(404).send("파일을 찾을 수 없습니다.");
 });
 
 // 로컬 IPv4 주소 자동 탐지 함수 (가상 어댑터 및 내부 서브넷 필터링)
@@ -403,10 +412,10 @@ async function uploadToCloudCDN(base64Data) {
   return null;
 }
 
-// 3. 사진 저장 및 처리 API (QR 코드 생성 & 인쇄)
+// 3. 사진 및 영상 저장 처리 API (QR 코드 생성 & 인쇄)
 app.post("/api/complete", async (req, res) => {
   try {
-    const { imageBase64, printCount = 1, frameTheme = "classic", printerName: reqPrinterName } = req.body;
+    const { imageBase64, videoBase64, printCount = 1, frameTheme = "classic", printerName: reqPrinterName } = req.body;
     const printerName = reqPrinterName || currentPrinterName || process.env.PRINTER_NAME || "EPSON L15150 Series";
 
     if (!imageBase64) {
@@ -428,18 +437,45 @@ app.post("/api/complete", async (req, res) => {
     memoryPhotos.set(fileName, buffer);
     const photoUrl = `/uploads/${fileName}`;
 
+    // 🎥 촬영 영상(타임랩스/비디오) 저장 처리
+    let videoFileName = null;
+    let videoUrl = null;
+    if (videoBase64 && typeof videoBase64 === "string" && videoBase64.length > 50) {
+      try {
+        const vidMatches = videoBase64.match(/^data:video\/([a-zA-Z0-9]+);base64,/);
+        const vidExt = vidMatches ? (vidMatches[1] === "webm" ? "webm" : "mp4") : "webm";
+        const cleanVidBase64 = videoBase64.replace(/^data:video\/\w+;base64,/, "");
+        const vidBuffer = Buffer.from(cleanVidBase64, "base64");
+        
+        const baseNameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+        videoFileName = `${baseNameWithoutExt}_video.${vidExt}`;
+        const vidFilePath = path.join(uploadDir, videoFileName);
+
+        fs.writeFileSync(vidFilePath, vidBuffer);
+        memoryPhotos.set(videoFileName, vidBuffer);
+        videoUrl = `/uploads/${videoFileName}`;
+        console.log(`[VIDEO SAVED] 촬영 영상 저장 완료: ${videoFileName} (${Math.round(vidBuffer.length / 1024)} KB)`);
+      } catch (vidErr) {
+        console.warn("촬영 영상 저장 오류:", vidErr.message);
+      }
+    }
+
     // 스마트폰 스캔용 다운로드 URL (스마트폰이 LTE/5G 어디서든 받을 수 있도록 글로벌 CDN 우선 적용)
     const reqHost = req.get("host") || `${localIp}:${PORT}`;
     const protocol = req.headers["x-forwarded-proto"] || req.protocol || (req.secure ? "https" : "http");
     const actualHost = (reqHost.includes("localhost") || reqHost.includes("127.0.0.1")) ? `${localIp}:${PORT}` : reqHost;
     
     let downloadUrl = `${protocol}://${actualHost}/download.html?file=${fileName}`;
+    if (videoFileName) {
+      downloadUrl += `&video=${videoFileName}`;
+    }
 
     // ⭐️ 로컬 / Vercel 상관없이 클라우드 CDN 업로드 우선 시도 (스마트폰 LTE/5G에서도 즉시 다운로드 가능)
     try {
       const cloudUrl = await uploadToCloudCDN(base64Data);
       if (cloudUrl) {
-        downloadUrl = `https://schoolphoto.vercel.app/download.html?img=${encodeURIComponent(cloudUrl)}`;
+        let vParam = videoFileName ? `&video=${videoFileName}` : "";
+        downloadUrl = `https://schoolphoto.vercel.app/download.html?img=${encodeURIComponent(cloudUrl)}${vParam}`;
         console.log(`[QR CODE URL] 글로벌 다운로드 링크 생성 완료: ${downloadUrl}`);
       } else {
         console.log(`[QR CODE URL] 로컬 네트워크 다운로드 링크 사용: ${downloadUrl}`);
@@ -488,6 +524,8 @@ app.post("/api/complete", async (req, res) => {
       success: true,
       fileName,
       photoUrl,
+      videoFileName,
+      videoUrl,
       downloadUrl,
       qrCodeDataUrl,
       printSuccess,

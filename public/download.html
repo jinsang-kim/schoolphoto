@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>인생네컷 사진 다운로드</title>
+  <title>인생네컷 사진 & 촬영 영상 다운로드</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }
@@ -14,41 +14,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 24px 16px;
+      padding: 24px 16px 40px;
     }
     .header { text-align: center; margin-bottom: 20px; }
     .header h1 { font-size: 22px; font-weight: 800; color: #38bdf8; margin-bottom: 4px; }
     .header p { font-size: 14px; color: #94a3b8; }
-    .preview-card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      padding: 12px;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      max-width: 100%;
-      display: flex;
-      justify-content: center;
-      margin-bottom: 24px;
-    }
-    .preview-card img { max-width: 100%; max-height: 60vh; border-radius: 8px; display: block; }
-    .action-group { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
-    .download-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white;
-      text-decoration: none;
-      font-size: 18px;
-      font-weight: 700;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
-    }
-    .tip { font-size: 13px; color: #64748b; text-align: center; line-height: 1.5; }
-    .not-found { text-align: center; padding: 40px 20px; color: #94a3b8; }
+    
     .retention-badge {
       display: inline-flex;
       align-items: center;
@@ -62,60 +33,245 @@
       color: #38bdf8;
       font-weight: 600;
     }
+
+    /* 탭 네비게이션 (사진 / 촬영 영상) */
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      background: #1e293b;
+      padding: 5px;
+      border-radius: 999px;
+      border: 1px solid #334155;
+      margin-bottom: 18px;
+      width: 100%;
+      max-width: 360px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 14px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .preview-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 12px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      max-width: 100%;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+      min-height: 280px;
+      position: relative;
+    }
+    .preview-card img,
+    .preview-card video {
+      max-width: 100%;
+      max-height: 60vh;
+      border-radius: 8px;
+      display: block;
+      object-fit: contain;
+    }
+
+    .action-group {
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .download-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      text-decoration: none;
+      font-size: 17px;
+      font-weight: 700;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+      transition: transform 0.1s ease;
+    }
+    .download-btn:active {
+      transform: scale(0.98);
+    }
+    .download-btn.video-btn {
+      background: linear-gradient(135deg, #a855f7, #7c3aed);
+      box-shadow: 0 8px 20px rgba(168, 85, 247, 0.4);
+    }
+
+    .tip { font-size: 12.5px; color: #64748b; text-align: center; line-height: 1.5; }
+    .not-found { text-align: center; padding: 40px 20px; color: #94a3b8; }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>✨ 인생네컷 다운로드 ✨</h1>
-    <p>소중한 추억을 스마트폰에 저장해보세요!</p>
+    <p>사진과 촬영 비하인드 영상을 스마트폰에 저장해보세요!</p>
     <div class="retention-badge" id="retention-badge">
       📅 유효기간: 촬영일로부터 7일간 보관
     </div>
   </div>
 
+  <!-- 탭 버튼 (사진 보기 / 영상 보기) -->
+  <div class="tab-nav" id="tab-nav" style="display: none;">
+    <button class="tab-btn active" id="tab-photo-btn" onclick="switchTab('photo')">
+      📷 사진 다운로드
+    </button>
+    <button class="tab-btn" id="tab-video-btn" onclick="switchTab('video')">
+      🎥 촬영 영상 (타임랩스)
+    </button>
+  </div>
+
   <div class="preview-card" id="card-box">
+    <!-- 사진 뷰어 -->
     <img id="photo-img" src="" alt="인생네컷 사진" style="display: none;">
-    <div id="loading-msg" style="padding: 40px 20px; color: #94a3b8;">사진을 불러오는 중입니다...</div>
+    <!-- 영상 뷰어 -->
+    <video id="video-player" src="" playsinline controls loop style="display: none;"></video>
+    
+    <div id="loading-msg" style="padding: 40px 20px; color: #94a3b8; text-align: center;">사진을 불러오는 중입니다...</div>
   </div>
 
   <div class="action-group" id="action-box" style="display: none;">
+    <!-- 사진 다운로드 버튼 -->
     <a id="dl-btn" href="#" download="life4cut_photo.jpg" class="download-btn">
       💾 고화질 사진 저장하기
     </a>
+    <!-- 영상 다운로드 버튼 -->
+    <a id="dl-video-btn" href="#" download="life4cut_video.webm" class="download-btn video-btn" style="display: none;">
+      🎬 촬영 영상 저장하기
+    </a>
+
     <p class="tip">※ 보관 유효기간(7일)이 지나면 개인정보 보호를 위해 자동 삭제됩니다.</p>
-    <p class="tip">※ 아이폰/갤럭시: 사진을 길게 누른 후 '사진 앱에 저장'을 터치하셔도 됩니다.</p>
+    <p class="tip" id="save-tip-text">※ 아이폰/갤럭시: 사진 또는 영상을 길게 누른 후 '사진 앱에 저장'을 터치하셔도 됩니다.</p>
   </div>
 
   <script>
     const params = new URLSearchParams(window.location.search);
     const imgUrl = params.get('img');
     const file = params.get('file');
+    const video = params.get('video');
 
     const photoImg = document.getElementById('photo-img');
+    const videoPlayer = document.getElementById('video-player');
     const loadingMsg = document.getElementById('loading-msg');
     const actionBox = document.getElementById('action-box');
+    const tabNav = document.getElementById('tab-nav');
+    const tabPhotoBtn = document.getElementById('tab-photo-btn');
+    const tabVideoBtn = document.getElementById('tab-video-btn');
     const dlBtn = document.getElementById('dl-btn');
+    const dlVideoBtn = document.getElementById('dl-video-btn');
 
-    let targetSrc = '';
+    let currentTab = 'photo';
+    let targetPhotoSrc = '';
+    let targetVideoSrc = '';
+
     if (imgUrl) {
-      targetSrc = imgUrl;
+      targetPhotoSrc = imgUrl;
     } else if (file) {
-      targetSrc = '/uploads/' + file;
+      targetPhotoSrc = '/uploads/' + file;
     }
 
-    if (targetSrc) {
-      photoImg.src = targetSrc;
+    // 영상 소스 자동 탐지 (URL 파라미터 video 또는 파일명 기반 추론)
+    if (video) {
+      targetVideoSrc = video.startsWith('http') ? video : '/uploads/' + video;
+    } else if (file) {
+      const base = file.replace(/\.[^/.]+$/, '');
+      targetVideoSrc = '/uploads/' + base + '_video.webm';
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      if (tab === 'photo') {
+        tabPhotoBtn.classList.add('active');
+        tabVideoBtn.classList.remove('active');
+        photoImg.style.display = 'block';
+        videoPlayer.style.display = 'none';
+        videoPlayer.pause();
+        dlBtn.style.display = 'flex';
+        dlVideoBtn.style.display = 'none';
+      } else {
+        tabPhotoBtn.classList.remove('active');
+        tabVideoBtn.classList.add('active');
+        photoImg.style.display = 'none';
+        videoPlayer.style.display = 'block';
+        videoPlayer.play().catch(() => {});
+        dlBtn.style.display = 'none';
+        dlVideoBtn.style.display = 'flex';
+      }
+    }
+
+    // 사진 로드
+    if (targetPhotoSrc) {
+      photoImg.src = targetPhotoSrc;
       photoImg.onload = () => {
         loadingMsg.style.display = 'none';
         photoImg.style.display = 'block';
         actionBox.style.display = 'flex';
-        dlBtn.href = targetSrc;
+        dlBtn.href = targetPhotoSrc;
+        checkVideoAvailability();
       };
       photoImg.onerror = () => {
         loadingMsg.innerText = '사진을 찾을 수 없습니다 😢';
+        checkVideoAvailability();
       };
     } else {
       loadingMsg.innerText = '사진 링크가 올바르지 않습니다.';
+      checkVideoAvailability();
+    }
+
+    // 영상 가용 여부 확인
+    function checkVideoAvailability() {
+      if (!targetVideoSrc) return;
+      const testVid = document.createElement('video');
+      testVid.src = targetVideoSrc;
+      testVid.onloadedmetadata = () => {
+        // 영상이 실제로 존재할 경우 탭 UI 활성화
+        tabNav.style.display = 'flex';
+        videoPlayer.src = targetVideoSrc;
+        dlVideoBtn.href = targetVideoSrc;
+        const ext = targetVideoSrc.endsWith('.mp4') ? 'mp4' : 'webm';
+        dlVideoBtn.download = `life4cut_video_${Date.now()}.${ext}`;
+      };
+      testVid.onerror = () => {
+        // mp4 fallback 확인
+        if (targetVideoSrc.endsWith('.webm')) {
+          const mp4Src = targetVideoSrc.replace('.webm', '.mp4');
+          const testMp4 = document.createElement('video');
+          testMp4.src = mp4Src;
+          testMp4.onloadedmetadata = () => {
+            targetVideoSrc = mp4Src;
+            tabNav.style.display = 'flex';
+            videoPlayer.src = mp4Src;
+            dlVideoBtn.href = mp4Src;
+            dlVideoBtn.download = `life4cut_video_${Date.now()}.mp4`;
+          };
+        }
+      };
     }
   </script>
 </body>
