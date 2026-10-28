@@ -26,19 +26,27 @@ const RETENTION_DAYS = 7;
 const RETENTION_SECONDS = 7 * 24 * 60 * 60; // 604,800 초 (ImgBB 만료 파라미터)
 const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000; // 604,800,000 밀리초
 
-// 로컬 uploads 폴더 우선 사용 (서버 재시작 후에도 7일간 유지), 실패 시 os.tmpdir fallback
+// 로컬 uploads 폴더 우선 사용 (서버 재시작 후에도 7일간 유지), Vercel 등 읽기전용 환경에서는 os.tmpdir() 사용
 const localUploadsDir = path.join(__dirname, "uploads");
 let uploadDir = localUploadsDir;
 try {
+  if (process.env.VERCEL) {
+    throw new Error("Vercel serverless environment uses tmpdir");
+  }
   if (!fs.existsSync(localUploadsDir)) {
     fs.mkdirSync(localUploadsDir, { recursive: true });
   }
+  // 실제 쓰기 가능 여부 테스트 (.gitkeep 등으로 폴더만 존재하고 읽기 전용인 경우 감지)
+  const probeFile = path.join(localUploadsDir, `.write_probe_${process.pid}`);
+  fs.writeFileSync(probeFile, "ok");
+  fs.unlinkSync(probeFile);
 } catch (e) {
-  console.warn("로컬 uploads 폴더 생성 실패, 임시 디렉토리 사용:", e.message);
   uploadDir = path.join(os.tmpdir(), "photobooth_uploads");
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
+  try {
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+  } catch (tmpErr) {}
 }
 const memoryPhotos = new Map();
 
